@@ -7,6 +7,8 @@
  * conventions or facelet mapping were wrong, this simulator would disagree.
  */
 
+import type { Cubie } from '../src/lib/cube/cubie';
+
 type V = [number, number, number];
 
 interface Sticker {
@@ -138,4 +140,29 @@ export function randomScramble(length: number, rand: () => number): string {
     out.push(ALL_MOVES[face * 3 + Math.floor(rand() * 3)]);
   }
   return out.join(' ');
+}
+
+/** A uniformly random legal cube state (NOT built from scrambles). */
+export function randomCubie(rand: () => number): Cubie {
+  const shuffle = (n: number) => {
+    const a = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const parity = (p: number[]) => {
+    let inv = 0;
+    for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) if (p[i] > p[j]) inv++;
+    return inv & 1;
+  };
+  const cp = shuffle(8);
+  const ep = shuffle(12);
+  if (parity(cp) !== parity(ep)) [ep[0], ep[1]] = [ep[1], ep[0]];
+  const co = Array.from({ length: 8 }, () => Math.floor(rand() * 3));
+  co[7] = (3 - (co.slice(0, 7).reduce((a, b) => a + b, 0) % 3)) % 3;
+  const eo = Array.from({ length: 12 }, () => Math.floor(rand() * 2));
+  eo[11] = eo.slice(0, 11).reduce((a, b) => a + b, 0) % 2;
+  return { cp, co, ep, eo };
 }

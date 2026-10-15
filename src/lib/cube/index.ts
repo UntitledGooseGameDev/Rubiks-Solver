@@ -10,5 +10,5 @@ export {
   SOLVED_FACELETS,
 } from './cubie';
 export type { Cubie, CubeError, CubeErrorCode, ParseResult } from './cubie';
-export { solveFacelets, solveCubie } from './solver';
+export { solveFacelets, solveCubie, solveCubieDetailed } from './solver';
 export type { SolveOptions, SolveResult } from './solver';

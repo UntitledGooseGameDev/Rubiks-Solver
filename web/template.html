@@ -239,6 +239,98 @@
   .ed-controls label { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; color: var(--dim); }
   .scan-status { margin-top: 12px; }
 
+  /* ---------- header, nav, pages ---------- */
+  .titlebar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; }
+  .ver {
+    display: inline-block; margin-left: 10px; padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--raised); color: var(--accent);
+    font: 600 0.78rem/1 var(--mono); letter-spacing: 0; vertical-align: middle; position: relative; top: -0.14em;
+  }
+  .nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  .nav a {
+    color: var(--dim); text-decoration: none; font: 600 14px/1 var(--body);
+    padding: 0 14px; min-height: 40px; display: inline-flex; align-items: center;
+    border-radius: 10px; border: 1px solid transparent;
+  }
+  .nav a:hover { color: var(--fg); border-color: var(--line); }
+  .nav a[aria-current="page"] { color: var(--fg); background: var(--raised); border-color: var(--line); }
+  footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  footer a { color: var(--dim); }
+  footer a:hover { color: var(--fg); }
+
+  /* ---------- method switcher + step list ---------- */
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--sunken); }
+  .seg button {
+    font: 600 14px/1.1 var(--body); color: var(--dim); background: none; border: 0; border-radius: 10px;
+    padding: 10px 6px; min-height: 44px; cursor: pointer;
+  }
+  .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:not([aria-checked="true"]):not(:disabled):hover { color: var(--fg); }
+  .seg button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .method-desc { margin: 10px 0 14px; color: var(--dim); font-size: 14px; }
+
+  .plan { margin-top: 16px; display: grid; gap: 20px; }
+  .plan-tools { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; }
+  .plan-note { color: var(--dim); font-size: 13px; margin: 0; flex: 1 1 240px; }
+  .linkbtn { background: none; border: 0; color: var(--accent); font: 600 13px/1 var(--body); cursor: pointer; padding: 10px 0; min-height: 40px; }
+  .linkbtn:hover { text-decoration: underline; }
+  .stg h3 { font: 700 0.95rem/1.25 var(--display); margin: 0; display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+  .stg h3 .cnt { font: 500 12px/1 var(--mono); color: var(--dim); white-space: nowrap; }
+  .stg .blurb { margin: 4px 0 10px; color: var(--dim); font-size: 13px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .step { border: 1px solid var(--line); border-radius: 12px; background: var(--sunken); padding: 8px 12px 10px; min-width: 0; }
+  .step.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .step.done .step-go, .step.done .detail { color: #7b849a; }
+  .step-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .step-go {
+    flex: 1 1 170px; min-width: 0; text-align: left; background: none; border: 0; color: var(--fg);
+    font: 600 14px/1.3 var(--body); cursor: pointer; padding: 6px 0; min-height: 36px;
+  }
+  .step-go:hover { color: var(--accent); }
+  .tag { font: 600 10.5px/1 var(--mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  .tag.alg { color: var(--accent); border-color: rgba(147,166,255,0.45); }
+  .step .cnt { font: 500 12px/1 var(--mono); color: var(--dim); white-space: nowrap; }
+  .step .detail { margin: 0; color: var(--dim); font-size: 13px; }
+  details.mv { margin-top: 6px; }
+  details.mv summary {
+    cursor: pointer; color: var(--accent); font: 600 13px/1 var(--body); padding: 8px 0; min-height: 36px;
+    list-style: none; display: flex; align-items: center; gap: 7px;
+  }
+  details.mv summary::-webkit-details-marker { display: none; }
+  details.mv summary::before { content: "\25B8"; display: inline-block; transition: transform 0.15s; }
+  details.mv[open] summary::before { transform: rotate(90deg); }
+  .chipbox { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+  .tok { white-space: nowrap; }
+  .tok i { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; background: var(--c); margin-right: 0.3em; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); vertical-align: -0.02em; }
+
+  /* ---------- text pages ---------- */
+  .doc { max-width: 820px; margin: 26px auto 0; }
+  .doc h2 { font: 700 clamp(1.4rem, 3.2vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.02em; margin: 0 0 8px; }
+  .doc .lede { color: var(--dim); margin: 0 0 20px; max-width: 62ch; }
+  .doc h3 { font: 700 1.05rem/1.25 var(--display); margin: 28px 0 8px; }
+  .doc a { color: var(--accent); }
+  .doc ul, .doc ol { margin: 8px 0; padding-left: 22px; }
+  .doc li { margin: 4px 0; }
+  .doc code { font: 500 0.9em/1 var(--mono); background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
+  .faq-search { width: 100%; font: 500 15px/1 var(--body); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; min-height: 46px; margin-bottom: 8px; }
+  .faq-search::placeholder { color: #626b7e; }
+  details.faq { border: 1px solid var(--line); border-radius: 12px; background: var(--raised); margin: 8px 0; }
+  details.faq > summary { cursor: pointer; padding: 14px 16px; font: 600 15px/1.35 var(--body); list-style: none; display: flex; gap: 10px; align-items: baseline; }
+  details.faq > summary::-webkit-details-marker { display: none; }
+  details.faq > summary::before { content: "\25B8"; color: var(--accent); transition: transform 0.15s; flex: none; }
+  details.faq[open] > summary::before { transform: rotate(90deg); }
+  details.faq > div { padding: 0 16px 14px 36px; color: var(--dim); font-size: 14px; }
+  details.faq > div p { margin: 6px 0; }
+  .checklist { border: 1px solid var(--line); border-radius: 16px; background: var(--raised); padding: 16px 18px; margin: 0 0 8px; }
+  .checklist h3 { margin: 0 0 6px; }
+  .none { color: var(--dim); margin: 14px 0; }
+  .rel { border: 1px solid var(--line); border-radius: 16px; background: var(--raised); padding: 18px; margin: 14px 0; }
+  .rel h2 { font: 700 1.25rem/1.2 var(--display); margin: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .rel .pill { font: 600 11px/1 var(--mono); color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 4px 8px; }
+  .rel time { display: block; color: var(--dim); font: 500 13px/1.3 var(--mono); margin-top: 6px; }
+  .rel .rt { font-weight: 600; margin: 8px 0 0; }
+  .rel h3 { font: 700 0.85rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin: 16px 0 4px; }
+
   @media (prefers-reduced-motion: reduce) {
     .st.flag, .spin { animation: none; }
   }
@@ -246,11 +338,18 @@
 
 <div class="wrap">
   <header>
-    <h1>Two-Phase Cube Solver</h1>
-    <p>Scramble a cube or paint your own sticker colors, then watch the solver turn it back, one move at a time.</p>
+    <div class="titlebar">
+      <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
+      <nav class="nav" aria-label="Pages">
+        <a href="#/" data-route="solver">Solver</a>
+        <a href="#/troubleshooting" data-route="troubleshooting">Troubleshooting</a>
+        <a href="#/updates" data-route="updates">Update log</a>
+      </nav>
+    </div>
+    <p>Scan or paint your cube, then watch it get solved one move at a time, in the method you choose.</p>
   </header>
 
-  <main class="layout">
+  <main class="layout" id="view-solver">
     <section class="stage-col" aria-label="3D cube">
       <div class="stage" id="stage" aria-label="Interactive 3D cube. Drag to rotate.">
         <div class="scene" id="scene"><div class="cube" id="cube"></div></div>
@@ -329,13 +428,151 @@
 
       <section class="block" aria-labelledby="h-sol">
         <h2 id="h-sol">Solution</h2>
+        <div class="seg" id="methodSeg" role="radiogroup" aria-label="Solving method">
+          <button type="button" role="radio" data-m="beginner" aria-checked="true">Beginner</button>
+          <button type="button" role="radio" data-m="cfop" aria-checked="false">CFOP</button>
+          <button type="button" role="radio" data-m="fast" aria-checked="false">Fastest</button>
+        </div>
+        <p class="method-desc" id="methodDesc"></p>
         <button class="btn primary" id="btnSolve">Solve this cube</button>
         <p class="status" id="solveStatus" role="status"></p>
-        <ol class="chips" id="chips" aria-label="Solution moves"></ol>
-        <p class="note">Solved with a two-phase search that runs in your browser. Moves are counted as face turns, so a half turn like R2 is one move. Most cubes take 19 to 23.</p>
+        <div class="plan" id="plan" aria-label="Solution steps"></div>
+        <p class="note" id="planNote"></p>
       </section>
     </aside>
   </main>
+
+  <main class="doc" id="view-troubleshooting" hidden>
+    <h2>Troubleshooting</h2>
+    <p class="lede">Most problems come down to the photos or to one misread sticker. Start with the checklist, then find your symptom below.</p>
+
+    <div class="checklist">
+      <h3>If a solution doesn&rsquo;t work on your real cube</h3>
+      <ol>
+        <li>Compare the sticker net on the Solver page with your real cube, face by face. One wrong sticker is the usual cause.</li>
+        <li>Hold your cube like the 3D cube: the face the page calls <strong>top</strong> up, and the <strong>front</strong> face toward you. For a standard cube that is white on top and green in front. Don&rsquo;t turn the whole cube while you follow the moves.</li>
+        <li>Each letter is a clockwise quarter turn of that face as you look straight at it. <code>R&rsquo;</code> is counterclockwise and <code>R2</code> is a half turn.</li>
+        <li>Start at the first move of the solution. If you slip, press <em>Back to the start</em> on the page and compare again.</li>
+      </ol>
+    </div>
+
+    <input class="faq-search" id="faqSearch" type="search" placeholder="Search problems, e.g. sideways, impossible, slow" aria-label="Search troubleshooting" autocomplete="off">
+    <p class="none" id="faqNone" hidden>Nothing matches that. Try a shorter word, or use the report button at the bottom.</p>
+
+    <section class="faq-group" id="faqs">
+      <h3>Photos and scanning</h3>
+      <details class="faq"><summary>A sticker color was read wrongly</summary><div>
+        <p>Click the photo&rsquo;s tile to open the editor. Each dot should sit in the middle of a sticker; if not, drag the grid, change <em>Size</em> and <em>Tilt</em>, or press <em>Auto-fit grid</em>. You can also fix any sticker directly: pick a color on the sticker net and click the sticker.</p>
+        <p>For better reads: even light, no flash glare, the face filling the frame and shot straight on, and a plain background.</p>
+      </div></details>
+      <details class="faq"><summary>It says two photos show the same center color</summary><div>
+        <p>A photo is in the wrong tile, or the same face was photographed twice. Each tile is named for the middle sticker of the face it wants (Green center, Red center, and so on). Replace the wrong photo from its editor.</p>
+      </div></details>
+      <details class="faq"><summary>My photo is sideways</summary><div>
+        <p>Open the photo and press <em>Rotate photo</em> until the top of the cube is at the top of the picture. Each press turns it a quarter turn clockwise. The Up and Down photos have their own orientation rules, written under their tiles.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;Couldn&rsquo;t read&hellip;&rdquo; or a photo won&rsquo;t open</summary><div>
+        <p>Use JPG or PNG. Some browsers can&rsquo;t open HEIC, the default iPhone format. Either convert the photo, or set the camera to <em>Most Compatible</em> and shoot again.</p>
+      </div></details>
+      <details class="faq"><summary>I picked several photos and they landed in the wrong tiles</summary><div>
+        <p>Photos picked together are assigned in file-name order: Green, Red, Blue, Orange, White, Yellow center. Rename the files 1 to 6, add them one at a time by clicking each tile, or drag a photo onto the tile you want.</p>
+      </div></details>
+      <details class="faq"><summary>Some stickers have a dashed outline</summary><div>
+        <p>The scan wasn&rsquo;t sure about those stickers. Compare each one with your cube and repaint it if it&rsquo;s wrong.</p>
+      </div></details>
+      <details class="faq"><summary>Orange and red, or white and yellow, keep getting mixed up</summary><div>
+        <p>These pairs are the hardest to tell apart, especially under warm or colored light. Move to daylight or a white lamp, turn off the flash, and retake the photo. If one sticker is still wrong, repaint it by hand.</p>
+      </div></details>
+      <details class="faq"><summary>My cube isn&rsquo;t the standard colors</summary><div>
+        <p>The scanner uses each face&rsquo;s center sticker to know which color is which, so other color schemes work. The page then shows the cube in standard colors, and the color names in the steps follow what the 3D cube shows.</p>
+      </div></details>
+      <details class="faq"><summary>Are my photos uploaded anywhere?</summary><div>
+        <p>No. Reading the photos and solving the cube both happen in your browser, and nothing leaves your device.</p>
+      </div></details>
+
+      <h3>Cube state and error messages</h3>
+      <details class="faq"><summary>The page says my cube is impossible or can&rsquo;t be solved</summary><div>
+        <p>Every message in this section means the 54 stickers don&rsquo;t describe a cube that turning the faces could produce. Almost always one or two stickers are wrong in the scan or in your painting, so compare the sticker net with your real cube. The message says what kind of mistake it found, and when it can, the stickers involved pulse red on the net.</p>
+        <p>If every sticker matches your real cube, the cube itself was taken apart and reassembled wrongly (for example, one corner twisted). No sequence of moves can fix that; it has to be fixed by hand.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;One corner looks twisted in place&rdquo;</summary><div>
+        <p>Exactly one corner would have to be twisted in place, which can&rsquo;t happen by turning faces. The page can&rsquo;t tell which corner, so it doesn&rsquo;t highlight any stickers. Usually one corner sticker was misread: check every corner against your cube, starting with the ones that mix similar colors (white and yellow, red and orange). If every sticker matches, the real cube was taken apart and a corner put back twisted, and no moves will solve it until it is twisted back.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;One edge looks flipped in place&rdquo;</summary><div>
+        <p>Same idea for an edge: one edge would have to be flipped in place. Nothing is highlighted because the page can&rsquo;t tell which edge. Check each edge&rsquo;s two stickers against your cube. If they all match, the real cube has a flipped edge and needs to be fixed by hand.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;Two pieces appear to be swapped&rdquo;</summary><div>
+        <p>The pieces look correct one by one, but together they would need two pieces swapped, which turning the faces never does. Nothing is highlighted because the page can&rsquo;t tell which pair. Re-check for two stickers that were swapped when you painted or scanned.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;The &hellip; corner (or edge) appears more than once&rdquo; or &ldquo;shows a color combination that doesn&rsquo;t exist&rdquo;</summary><div>
+        <p>A sticker has the wrong color, so a piece shows up twice or has colors that never sit together on a real cube. The stickers involved are highlighted. Compare them with your cube and repaint.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;Every color must appear exactly 9 times&rdquo;</summary><div>
+        <p>One color was used too many times and another too few. The extra stickers of the overused color are highlighted. Count that color on your cube and repaint the wrong ones.</p>
+      </div></details>
+      <details class="faq"><summary>&ldquo;The six center stickers must all be different colors&rdquo;</summary><div>
+        <p>Each center identifies a face, so no two may match. In a scan this usually means two photos are in the wrong tiles. Centers can&rsquo;t be repainted on the net.</p>
+      </div></details>
+
+      <h3>Solving and the steps</h3>
+      <details class="faq"><summary>The solution didn&rsquo;t solve my real cube</summary><div>
+        <p>Work through the checklist at the top. The two most common causes are one wrong sticker in the page&rsquo;s cube, and holding the cube differently from the 3D view (for example, turning the whole cube between steps).</p>
+      </div></details>
+      <details class="faq"><summary>Why does Beginner build the &ldquo;bottom&rdquo; first? My guide starts on top.</summary><div>
+        <p>Beginner and CFOP both build the first layer on the bottom face and finish on top, so the cube stays in the same position the whole time. With a standard cube that means the yellow side first and white last. The algorithms are the same ones taught elsewhere, only with the colors swapped.</p>
+      </div></details>
+      <details class="faq"><summary>Beginner repeats the same algorithm up to five times</summary><div>
+        <p>That is how Righty, Lefty and the corner twist work: repeat the short algorithm until the corner drops in or twists the right way. The page shows the repeats as one step (for example <em>Righty &times;3</em>).</p>
+      </div></details>
+      <details class="faq"><summary>Beginner is 150+ moves, CFOP about 60, Fastest about 20</summary><div>
+        <p>Fewer moves means more to memorize. Fastest has no named algorithms; it is a computer&rsquo;s shortest answer. Beginner uses a handful of algorithms and is easy to learn but long. CFOP is what speedcubers use and sits in between.</p>
+      </div></details>
+      <details class="faq"><summary>Why does CFOP only have two OLL steps?</summary><div>
+        <p>This version solves OLL in two looks (top edges first, then top corners), which needs only a few algorithms. The 57 single-look OLL algorithms are not included. PLL does use all 21 algorithms.</p>
+      </div></details>
+      <details class="faq"><summary>The F2L steps have no names</summary><div>
+        <p>F2L pairs are solved by working out the best few moves for that position, not by memorizing algorithms, so each pair is a short custom sequence. Open its dropdown to see the moves.</p>
+      </div></details>
+      <details class="faq"><summary>It says &ldquo;Solving&hellip;&rdquo; for a long time or the solver couldn&rsquo;t finish</summary><div>
+        <p>The first solve after opening the page builds its lookup tables, which takes about a second. Fastest can use up to a second more looking for a shorter answer. If it stays stuck, reload the page. If it happens again, copy the report details below and send them along.</p>
+      </div></details>
+
+      <h3>The 3D cube and the page</h3>
+      <details class="faq"><summary>The 3D cube is blank or doesn&rsquo;t animate</summary><div>
+        <p>The cube uses CSS 3D, which every current browser supports. Check that hardware acceleration is on, update the browser, and try another one if it persists. If your system is set to <em>reduce motion</em>, turns are shortened on purpose.</p>
+      </div></details>
+      <details class="faq"><summary>The animation is too fast, too slow or choppy</summary><div>
+        <p>Use the Speed slider under the cube. Closing other tabs helps if it stutters. Keys: <code>Space</code> plays and pauses, <code>&larr;</code> and <code>&rarr;</code> step back and forward.</p>
+      </div></details>
+      <details class="faq"><summary>The fonts look different</summary><div>
+        <p>The page loads its fonts from Google Fonts. Without a connection it falls back to your system fonts; everything else still works.</p>
+      </div></details>
+    </section>
+
+    <div class="checklist" style="margin-top:28px">
+      <h3>Still stuck?</h3>
+      <p style="color:var(--dim);margin:6px 0 12px">Copy the report details (they include your cube&rsquo;s sticker string, so the problem can be reproduced) and paste them into a new issue.</p>
+      <div class="row">
+        <button class="btn" type="button" id="btnReport">Copy report details</button>
+        <a class="btn primary" id="reportLink" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">Open a GitHub issue</a>
+      </div>
+      <p class="msg" id="reportMsg" role="status"></p>
+    </div>
+  </main>
+
+  <main class="doc" id="view-updates" hidden>
+    <h2>Update log</h2>
+    <p class="lede">What changed in each version, newest first.</p>
+    <div id="releases"></div>
+  </main>
+
+  <footer>
+    <span id="footVer"></span>
+    <span>Everything runs in your browser</span>
+    <a href="#/troubleshooting">Troubleshooting</a>
+    <a href="#/updates">Update log</a>
+    <a id="footRepo" href="#" target="_blank" rel="noopener">Source on GitHub</a>
+  </footer>
 </div>
 
 <script id="solver-src">
@@ -346,6 +583,9 @@
 </script>
 <script>
 /*__SCANUI__*/
+</script>
+<script>
+/*__SITEINFO__*/
 </script>
 <script>
 (function () {
@@ -546,11 +786,71 @@
   }
 
   // ---- solution + playback ----
-  var chipsEl = $('chips');
+  var planEl = $('plan');
+  var METHOD_INFO = {
+    beginner: {
+      label: 'Beginner',
+      desc: 'Layer by layer, using a few named algorithms you can learn: Righty and Lefty, the right- and left-hand algorithms, Sune and Niklas. Long (about 150 moves) but easy to follow.',
+      note: 'Every move is a face turn, and a half turn like R2 counts as one. This method is longer than the fastest solution because every step is one a person can learn.'
+    },
+    cfop: {
+      label: 'CFOP',
+      desc: 'Cross, F2L, OLL, PLL: the method most speedcubers use. Here OLL is done in two looks. Usually 55 to 85 moves.',
+      note: 'Every move is a face turn, and a half turn like R2 counts as one. F2L pairs are worked out on the spot, so they have no names; OLL and PLL use named algorithms.'
+    },
+    fast: {
+      label: 'Fastest',
+      desc: 'The shortest solution a computer can find, about 20 moves. It has no named algorithms, just the moves, split into the solver’s two phases.',
+      note: 'Solved with a two-phase search that runs in your browser. Moves are counted as face turns, so a half turn like R2 is one move. Most cubes take 19 to 23.'
+    }
+  };
+  var method = 'beginner';
+  try { var savedMethod = localStorage.getItem('cube-method'); if (savedMethod && METHOD_INFO[savedMethod]) method = savedMethod; } catch (err) { /* storage unavailable */ }
+  var plan = null;          // the solution on screen: { method, stages, steps, moves, length }
+  var stepRanges = [];      // [start, end) move indexes of each step
+  var currentStep = -1;
+  var KIND_TAG = { alg: 'algorithm', setup: 'line up', free: 'solve it' };
+
+  // Names for the colors, read from what the 3D cube is showing (scanned cubes can remap them).
+  var DEFAULT_RGB = { U: [243, 245, 248], R: [229, 35, 47], F: [23, 180, 91], D: [255, 214, 10], L: [255, 125, 26], B: [43, 109, 245] };
+  var DEFAULT_NAME = { U: 'white', R: 'red', F: 'green', D: 'yellow', L: 'orange', B: 'blue' };
+  function parseRGB(str) {
+    str = (str || '').trim();
+    var m = /^#([0-9a-f]{6})$/i.exec(str);
+    if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)];
+    m = /rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/.exec(str);
+    return m ? [+m[1], +m[2], +m[3]] : null;
+  }
+  function colorName(letter) {
+    var rgb = parseRGB(getComputedStyle(document.documentElement).getPropertyValue('--c-' + letter));
+    if (!rgb) return DEFAULT_NAME[letter];
+    var best = letter, bd = Infinity;
+    Object.keys(DEFAULT_RGB).forEach(function (k) {
+      var c = DEFAULT_RGB[k], d = Math.pow(c[0] - rgb[0], 2) + Math.pow(c[1] - rgb[1], 2) + Math.pow(c[2] - rgb[2], 2);
+      if (d < bd) { bd = d; best = k; }
+    });
+    return DEFAULT_NAME[best];
+  }
+  /** Text with [U] [R] [F] [D] [L] [B] tokens as plain words. */
+  function plain(text) { return String(text).replace(/\[([URFDLB])\]/g, function (_, l) { return colorName(l); }); }
+  /** Append text to `parent`, turning [D]-style tokens into a color dot plus its name. */
+  function richText(parent, text) {
+    var re = /\[([URFDLB])\]/g, last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var span = document.createElement('span'); span.className = 'tok';
+      var dot = document.createElement('i'); dot.style.setProperty('--c', COLOR[m[1]]);
+      span.appendChild(dot); span.appendChild(document.createTextNode(colorName(m[1])));
+      parent.appendChild(span);
+      last = re.lastIndex;
+    }
+    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+  }
 
   function clearSolution() {
     playing = false; moves = []; idx = 0; startState = state;
-    chipsEl.innerHTML = '';
+    plan = null; stepRanges = []; currentStep = -1;
+    planEl.innerHTML = '';
     setStatus('', false);
     updateTransport();
   }
@@ -563,20 +863,92 @@
     var t = document.createElement('span'); t.textContent = text; el.appendChild(t);
   }
 
-  function buildChips() {
-    chipsEl.innerHTML = '';
-    moves.forEach(function (m, i) {
-      var li = document.createElement('li');
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'chip'; b.textContent = L.moveName(m); b.dataset.i = i;
-      b.setAttribute('aria-label', 'Go to after move ' + (i + 1) + ', ' + L.moveName(m));
-      li.appendChild(b); chipsEl.appendChild(li);
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  /** Draw the solution as stages, each holding named steps with a dropdown of exact moves. */
+  function buildPlan() {
+    planEl.innerHTML = '';
+    stepRanges = []; currentStep = -1;
+    if (!plan) return;
+
+    var tools = el('div', 'plan-tools');
+    var note = el('p', 'plan-note');
+    richText(note, plan.method === 'fast'
+      ? 'Click any move to jump to it.'
+      : 'Keep the cube like the 3D view: [U] on top, [F] facing you. We build the [D] layer first and finish on top.');
+    var toggle = el('button', 'linkbtn', 'Show all moves');
+    toggle.type = 'button'; toggle.id = 'btnToggleMoves';
+    tools.appendChild(note); tools.appendChild(toggle);
+    planEl.appendChild(tools);
+
+    var stageInfo = {}, stageMoves = {};
+    plan.stages.forEach(function (st) { stageInfo[st.key] = st; });
+    plan.steps.forEach(function (st) { stageMoves[st.stage] = (stageMoves[st.stage] || 0) + st.moves.length; });
+
+    var pos = 0, groupKey = null, groupNo = 0, list = null;
+    plan.steps.forEach(function (st, si) {
+      if (st.stage !== groupKey) {
+        groupKey = st.stage; groupNo++;
+        var info = stageInfo[st.stage] || { title: st.stage, blurb: '' };
+        var group = el('section', 'stg');
+        var h = el('h3');
+        h.appendChild(el('span', '', groupNo + '. ' + info.title));
+        h.appendChild(el('span', 'cnt', stageMoves[st.stage] + (stageMoves[st.stage] === 1 ? ' move' : ' moves')));
+        group.appendChild(h);
+        var bl = el('p', 'blurb'); richText(bl, info.blurb); group.appendChild(bl);
+        list = el('ol', 'steps');
+        group.appendChild(list);
+        planEl.appendChild(group);
+      }
+      var start = pos, end = pos + st.moves.length;
+      pos = end;
+      stepRanges.push([start, end]);
+
+      var li = el('li', 'step'); li.dataset.step = si;
+      var top = el('div', 'step-top');
+      var go = el('button', 'step-go'); go.type = 'button'; go.dataset.start = start; go.title = 'Jump to this step';
+      richText(go, st.title);
+      var tag = el('span', 'tag' + (st.kind === 'alg' ? ' alg' : ''), KIND_TAG[st.kind] || '');
+      var cnt = el('span', 'cnt', st.moves.length + (st.moves.length === 1 ? ' move' : ' moves'));
+      top.appendChild(go); top.appendChild(tag); top.appendChild(cnt);
+      li.appendChild(top);
+      if (st.detail) { var d = el('p', 'detail'); richText(d, st.detail); li.appendChild(d); }
+
+      var det = el('details', 'mv');
+      if (plan.method === 'fast' || st.kind === 'setup') det.open = true;
+      det.appendChild(el('summary', '', 'Show exact moves'));
+      var box = el('div', 'chipbox');
+      st.moves.forEach(function (mv, k) {
+        var b = el('button', 'chip', mv); b.type = 'button'; b.dataset.i = start + k;
+        b.setAttribute('aria-label', 'Go to after move ' + (start + k + 1) + ', ' + mv);
+        box.appendChild(b);
+      });
+      det.appendChild(box);
+      li.appendChild(det);
+      list.appendChild(li);
     });
   }
-  chipsEl.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('.chip') : null;
-    if (!b || busy) return;
-    gotoStep(+b.dataset.i + 1);
+
+  planEl.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.closest) return;
+    if (t.closest('#btnToggleMoves')) {
+      var all = planEl.querySelectorAll('details.mv');
+      var anyClosed = Array.prototype.some.call(all, function (d) { return !d.open; });
+      Array.prototype.forEach.call(all, function (d) { d.open = anyClosed; });
+      t.closest('#btnToggleMoves').textContent = anyClosed ? 'Hide all moves' : 'Show all moves';
+      return;
+    }
+    if (busy) return;
+    var chip = t.closest('.chip');
+    if (chip) { gotoStep(+chip.dataset.i + 1); return; }
+    var go = t.closest('.step-go');
+    if (go) gotoStep(+go.dataset.start);
   });
 
   function updateTransport() {
@@ -588,19 +960,39 @@
     var label = playing ? 'Pause' : (has && idx >= moves.length ? 'Replay' : 'Play');
     $('btnPlay').title = label; $('btnPlay').setAttribute('aria-label', label);
     $('playIcon').innerHTML = playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
-    var chips = chipsEl.querySelectorAll('.chip');
+
+    var chips = planEl.querySelectorAll('.chip');
     for (var i = 0; i < chips.length; i++) {
       chips[i].classList.toggle('done', i < idx);
       chips[i].classList.toggle('current', i === idx - 1);
       chips[i].disabled = busy;
     }
+    // The current step is the first one that still has moves left to play.
+    var cur = -1;
+    for (var k = 0; k < stepRanges.length; k++) { if (idx < stepRanges[k][1]) { cur = k; break; } }
+    var stepEls = planEl.querySelectorAll('.step');
+    for (var j = 0; j < stepEls.length; j++) {
+      stepEls[j].classList.toggle('done', stepRanges[j] && idx >= stepRanges[j][1]);
+      stepEls[j].classList.toggle('current', j === cur);
+      if (j === cur) stepEls[j].setAttribute('aria-current', 'step'); else stepEls[j].removeAttribute('aria-current');
+    }
+    if (cur !== currentStep) {
+      currentStep = cur;
+      if (cur >= 0 && idx > 0 && stepEls[cur] && stepEls[cur].offsetParent !== null) {
+        stepEls[cur].scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    }
+    var stepTitle = plan && cur >= 0 ? plain(plan.steps[cur].title) : '';
     $('progress').textContent = has
-      ? (idx >= moves.length ? 'Solved after ' + moves.length + ' moves' : 'Move ' + idx + ' of ' + moves.length + (idx < moves.length ? ' · next ' + L.moveName(moves[idx]) : ''))
+      ? (idx >= moves.length ? 'Solved after ' + moves.length + ' moves'
+        : 'Move ' + (idx + 1) + ' of ' + moves.length + (stepTitle && plan.method !== 'fast' ? ' · ' + stepTitle : '') + ' · next ' + L.moveName(moves[idx]))
       : '';
     $('moveLabel').textContent = idx > 0 && has ? L.moveName(moves[idx - 1]) : '';
     $('btnScramble').disabled = busy || solving;
     $('btnReset').disabled = busy || solving;
     $('btnSolve').disabled = busy || solving;
+    var seg = $('methodSeg').querySelectorAll('button');
+    for (var q = 0; q < seg.length; q++) seg[q].disabled = busy || solving;
   }
 
   function gotoStep(k) {
@@ -688,7 +1080,7 @@
     if (worker) return worker;
     try {
       var src = document.getElementById('solver-src').textContent;
-      var code = src + '\nself.onmessage=function(e){try{self.postMessage(CubeSolver.solveFacelets(e.data.facelets,e.data.opts))}catch(err){self.postMessage({ok:false,code:"INTERNAL",message:String(err&&err.message||err)})}};';
+      var code = src + '\nself.onmessage=function(e){try{self.postMessage(CubeSolver.solveForMethod(e.data.facelets,e.data.method))}catch(err){self.postMessage({ok:false,code:"INTERNAL",message:String(err&&err.message||err)})}};';
       worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
       worker.onmessage = function (e) { var cb = pending; pending = null; if (cb) cb(e.data); };
       worker.onerror = function () { worker = null; var cb = pending; pending = null; if (cb) solveOnMainThread(cb); };
@@ -697,14 +1089,19 @@
   }
   var lastRequest = null;
   function solveOnMainThread(cb) {
-    setTimeout(function () { cb(CubeSolver.solveFacelets(lastRequest)); }, 30);
+    setTimeout(function () {
+      var r;
+      try { r = CubeSolver.solveForMethod(lastRequest.facelets, lastRequest.method); }
+      catch (err) { r = { ok: false, code: 'INTERNAL', message: String(err && err.message || err) }; }
+      cb(r);
+    }, 30);
   }
-  function requestSolve(facelets, cb) {
-    lastRequest = facelets;
+  function requestSolve(facelets, m, cb) {
+    lastRequest = { facelets: facelets, method: m };
     var w = getWorker();
     if (!w) { solveOnMainThread(cb); return; }
     pending = cb;
-    w.postMessage({ facelets: facelets, opts: {} });
+    w.postMessage(lastRequest);
   }
 
   function solve() {
@@ -714,21 +1111,137 @@
     if (L.isSolved(state)) { clearSolution(); setStatus('The cube is already solved. Scramble it to see a solution.', false); return; }
     solving = true; clearSolution(); updateTransport();
     setStatus('Solving…', false, true);
-    var snapshot = state;
-    requestSolve(snapshot, function (r) {
+    var snapshot = state, used = method;
+    requestSolve(snapshot, used, function (r) {
       solving = false;
       if (!r || !r.ok) { setStatus((r && r.message) || 'The solver could not finish.', true); updateTransport(); return; }
       startState = snapshot;
-      moves = L.parseAlg(r.solution);
+      plan = r;
+      moves = L.parseAlg(r.moves.join(' '));
       idx = 0;
-      buildChips();
-      setStatus('Found a ' + r.length + '-move solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
+      buildPlan();
+      setStatus('Found ' + (/^(8|11|18)$/.test(String(r.length)) ? 'an ' : 'a ') + r.length + '-move ' + METHOD_INFO[used].label + ' solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
       updateTransport();
     });
   }
   $('btnSolve').addEventListener('click', solve);
 
+  // ---- method switcher ----
+  function renderMethod() {
+    Array.prototype.forEach.call($('methodSeg').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-checked', b.dataset.m === method ? 'true' : 'false');
+    });
+    $('methodDesc').textContent = METHOD_INFO[method].desc;
+    $('planNote').textContent = METHOD_INFO[method].note;
+  }
+  $('methodSeg').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-m]') : null;
+    if (!b || b.disabled || busy || solving || b.dataset.m === method) return;
+    method = b.dataset.m;
+    try { localStorage.setItem('cube-method', method); } catch (err) { /* storage unavailable */ }
+    renderMethod();
+    if (moves.length) { gotoStep(0); solve(); } // same cube, new method
+  });
+
+  // ---- pages: Solver / Troubleshooting / Update log ----
+  var PAGES = { '': 'solver', '/': 'solver', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  function route() {
+    var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
+    ['solver', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
+      if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    document.title = PAGE_TITLE[name];
+    if (name !== 'solver') pause();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+
+  function formatDate(iso) {
+    return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+  function renderReleases() {
+    var host = $('releases');
+    host.innerHTML = '';
+    SiteInfo.changelog.forEach(function (rel, i) {
+      var art = el('article', 'rel');
+      var h = el('h2', '', 'v' + rel.version);
+      if (i === 0) h.appendChild(el('span', 'pill', 'Latest'));
+      art.appendChild(h);
+      var t = el('time', '', formatDate(rel.date)); t.dateTime = rel.date;
+      art.appendChild(t);
+      art.appendChild(el('p', 'rt', rel.title));
+      rel.sections.forEach(function (sec) {
+        art.appendChild(el('h3', '', sec.heading));
+        var ul = el('ul');
+        sec.items.forEach(function (item) { ul.appendChild(el('li', '', item)); });
+        art.appendChild(ul);
+      });
+      host.appendChild(art);
+    });
+  }
+
+  $('faqSearch').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    var items = document.querySelectorAll('#faqs details.faq');
+    var shown = 0;
+    Array.prototype.forEach.call(items, function (d) {
+      var hit = !q || d.textContent.toLowerCase().indexOf(q) >= 0;
+      d.hidden = !hit;
+      d.open = !!q && hit;
+      if (hit) shown++;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#faqs h3'), function (h) {
+      var n = h.nextElementSibling, any = false;
+      while (n && n.tagName !== 'H3') { if (n.tagName === 'DETAILS' && !n.hidden) any = true; n = n.nextElementSibling; }
+      h.hidden = !any;
+    });
+    $('faqNone').hidden = shown !== 0;
+  });
+
+  function reportText() {
+    return [
+      'Two-Phase Cube Solver v' + SiteInfo.version,
+      'Method: ' + METHOD_INFO[method].label,
+      'Cube now (54 stickers, order U R F D L B): ' + state,
+      'Cube at the start of the solution: ' + startState,
+      'Cube check: ' + $('validity').textContent.trim(),
+      'Status: ' + ($('solveStatus').textContent.trim() || '(none)'),
+      'Browser: ' + navigator.userAgent,
+      '',
+      'What happened (please describe):',
+      ''
+    ].join('\n');
+  }
+  $('btnReport').addEventListener('click', function () {
+    var text = reportText(), msg = $('reportMsg');
+    function done(ok) {
+      msg.className = 'msg' + (ok ? '' : ' bad');
+      msg.textContent = ok ? 'Copied. Paste it into the issue and describe what went wrong.' : 'Couldn’t copy automatically. Select the text of your cube from the Solver page and include it in the issue.';
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        done(ok);
+      } catch (err) { done(false); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    else fallback();
+  });
+
   // ---- boot: an example scramble that is already solved for, so the page opens in a working state ----
+  $('ver').textContent = 'v' + SiteInfo.version;
+  $('footVer').textContent = 'Two-Phase Cube Solver v' + SiteInfo.version;
+  $('footRepo').href = SiteInfo.repo;
+  $('reportLink').href = SiteInfo.repo + '/issues/new';
+  renderReleases();
+  renderMethod();
+  route();
   window.addEventListener('resize', layout);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
   applyView();
@@ -761,6 +1274,6 @@
   };
 
   // exposed for testing in a browser console
-  window.__cube ={ get state() { return state; }, get moves() { return moves; }, get idx() { return idx; } };
+  window.__cube = { get state() { return state; }, get moves() { return moves; }, get idx() { return idx; }, get method() { return method; }, get plan() { return plan; } };
 })();
 </script>

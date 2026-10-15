@@ -33,7 +33,7 @@ export interface SolveOptions {
 }
 
 export type SolveResult =
-  | { ok: true; moves: string[]; solution: string; length: number; ms: number }
+  | { ok: true; moves: string[]; solution: string; length: number; ms: number; phase1: number }
   | CubeError;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -48,6 +48,8 @@ class Search {
 
   bestLen: number;
   best: number[] | null = null;
+  /** Length of the phase-1 part of `best`. */
+  bestPhase1 = 0;
 
   constructor(
     private readonly start: Cubie,
@@ -119,6 +121,7 @@ class Search {
       if (this.dfs2(cp, ep, sp, 0, lim, lastFace)) {
         this.best = [...this.path1.slice(0, d1), ...this.path2.slice(0, lim)];
         this.bestLen = this.best.length;
+        this.bestPhase1 = d1;
         if (this.deadline === Infinity) this.deadline = now() + this.timeoutMs;
         return this.bestLen <= this.targetLength;
       }
@@ -153,6 +156,13 @@ class Search {
 export function solveCubie(
   cubie: Cubie, options: SolveOptions = {},
 ): number[] {
+  return solveCubieDetailed(cubie, options).moves;
+}
+
+/** Like solveCubie, but also reports how many of the moves belong to phase 1. */
+export function solveCubieDetailed(
+  cubie: Cubie, options: SolveOptions = {},
+): { moves: number[]; phase1: number } {
   const search = new Search(
     cubie,
     options.targetLength ?? 0,
@@ -161,7 +171,7 @@ export function solveCubie(
   );
   const sol = search.run();
   if (!sol) throw new Error('No solution found within maxLength; try a larger maxLength.');
-  return sol;
+  return { moves: sol, phase1: search.bestPhase1 };
 }
 
 /**
@@ -173,9 +183,9 @@ export function solveFacelets(input: string, options: SolveOptions = {}): SolveR
   if (!parsed.ok) return parsed;
   const t0 = now();
   if (parsed.facelets === SOLVED_FACELETS) {
-    return { ok: true, moves: [], solution: '', length: 0, ms: 0 };
+    return { ok: true, moves: [], solution: '', length: 0, ms: 0, phase1: 0 };
   }
-  const idx = solveCubie(parsed.cubie, options);
-  const moves = idx.map((m) => MOVE_NAMES[m]);
-  return { ok: true, moves, solution: moves.join(' '), length: moves.length, ms: now() - t0 };
+  const found = solveCubieDetailed(parsed.cubie, options);
+  const moves = found.moves.map((m) => MOVE_NAMES[m]);
+  return { ok: true, moves, solution: moves.join(' '), length: moves.length, ms: now() - t0, phase1: found.phase1 };
 }

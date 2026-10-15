@@ -53,3 +53,39 @@ test('renderFaces gives 26 cubies x 6 faces with exactly 54 stickers', () => {
   assert.equal(stickers.length, 54);
   assert.equal(new Set(stickers.map((f: { idx: number }) => f.idx)).size, 54);
 });
+
+// ---------------------------------------------------------------- site info + built page
+import { readFileSync } from 'node:fs';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Site = require('../web/site-info.js');
+
+test('version number: the page, the update log and package.json agree', () => {
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+  assert.equal(`${Site.version}.0`, pkg.version, 'package.json version should be the site version plus .0');
+  assert.equal(Site.changelog[0].version, Site.version, 'the newest update-log entry is the current version');
+  assert.equal(Site.version, '2.0');
+});
+
+test('update log: every release has a date, a title and non-empty sections, newest first', () => {
+  const versions = new Set<string>();
+  let prev = '9999-12-31';
+  for (const rel of Site.changelog) {
+    assert.match(rel.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(rel.date <= prev, `${rel.version} is out of order`);
+    prev = rel.date;
+    assert.ok(rel.title && rel.sections.length > 0);
+    for (const sec of rel.sections) assert.ok(sec.heading && sec.items.length > 0 && sec.items.every((i: string) => i.length > 0));
+    assert.ok(!versions.has(rel.version), 'duplicate version');
+    versions.add(rel.version);
+  }
+});
+
+test('built page: has the three methods, both new pages, and docs/ matches web/', () => {
+  const web = readFileSync('web/index.html', 'utf8');
+  const docs = readFileSync('docs/index.html', 'utf8');
+  assert.equal(docs, web, 'run npm run build:web: docs/index.html is out of date');
+  for (const needle of ['data-m="beginner"', 'data-m="cfop"', 'data-m="fast"', 'id="view-troubleshooting"', 'id="view-updates"', 'solveForMethod', 'Niklas']) {
+    assert.ok(web.includes(needle), `missing ${needle}`);
+  }
+  assert.ok(!web.includes('/*__'), 'a build placeholder was left in the page');
+});

@@ -160,10 +160,10 @@ const EDGE_FACELET: number[][] = [
   [32, 16], [28, 25], [30, 43], [34, 52], // DR DF DL DB
   [23, 12], [21, 41], [50, 39], [48, 14], // FR FL BL BR
 ];
-const CORNER_COLOR: number[][] = [
+export const CORNER_COLOR: number[][] = [
   [U, R, F], [U, F, L], [U, L, B], [U, B, R], [D, F, R], [D, L, F], [D, B, L], [D, R, B],
 ];
-const EDGE_COLOR: number[][] = [
+export const EDGE_COLOR: number[][] = [
   [U, R], [U, F], [U, L], [U, B], [D, R], [D, F], [D, L], [D, B], [F, R], [F, L], [B, L], [B, R],
 ];
 

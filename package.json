@@ -1,8 +1,8 @@
 {
   "name": "rubiks-solver",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript",
+  "description": "Rubik's Cube solver (two-phase, Beginner and CFOP methods) with photo scanning, in dependency-free TypeScript",
   "scripts": {
     "test": "tsx --test tests/*.test.ts",
     "solve": "tsx scripts/solve.ts",

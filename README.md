@@ -5,7 +5,7 @@
 
 A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript. It takes the 54 sticker colors of a cube, validates that the cube is physically possible, and returns a move sequence that solves it, typically 19–23 moves.
 
-It comes with a browser page that reads a cube from six photos, shows it in 3D and animates the solution (the WCA leaderboard is not built yet). The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
+It comes with a browser page (v2.0) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The WCA leaderboard is not built yet. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
 
 ## Just want to use it?
 
@@ -19,7 +19,7 @@ Node is only needed to run the tests, use the command-line solver, or rebuild th
 
 ```bash
 npm install
-npm test            # 35 tests, about 4 minutes
+npm test            # 52 tests, about 4 minutes
 npm run solve -- --scramble "R U R' U' F2 D L'"
 npm run solve -- --random
 npm run solve -- --facelets <54 stickers>
@@ -71,15 +71,48 @@ Face layout (looking straight at each face, cube held with U on top and F toward
 3. **Phase 2**: IDA* over those 10 moves to finish the cube. Both phases use pruning tables built by breadth-first search over coordinate pairs.
 4. The search keeps improving the first solution until the time budget runs out.
 
+## Solving methods
+
+`solveForMethod(stickers, method)` in `src/lib/method/` returns the solution as named steps, each with its exact moves:
+
+```ts
+import { solveForMethod } from './src/lib/method';
+
+const r = solveForMethod(stickers, 'beginner'); // or 'cfop' or 'fast'
+if (r.ok) {
+  r.stages;  // [{ key: 'cross', title: 'Bottom cross', blurb: '...' }, ...]
+  r.steps;   // [{ stage: 'corners', title: 'Righty ×3', kind: 'alg', moves: ["R","U","R'","U'", ...] }, ...]
+  r.moves;   // every move in order, ready to animate
+}
+```
+
+In the two human methods the first layer is built on the bottom (D) and the last layer is on top (U), with the cube held as it appears on screen. Text like `[D]` in titles stands for the color of that face; the page turns it into a color name and dot.
+
+| Method | Steps | Typical length |
+| --- | --- | --- |
+| **Beginner** | Bottom cross (one edge at a time), bottom corners with **Righty** / **Lefty**, middle layer with the **right-hand / left-hand algorithms**, top cross (`F R U R' U' F'`), top edges with **Sune + U**, top corners with **Niklas**, corner twisting with `R' D' R D` | about 150 moves |
+| **CFOP** | Optimal **Cross**, four **F2L** pairs (each found by search, so they have no names), two-look **OLL** (line / L-shape, then Sune, Antisune, H, Pi, U), all 21 **PLL** algorithms | about 60 moves |
+| **Fastest** | The two-phase solution, split into its two phases | about 20 moves |
+
+How the human methods work:
+
+- Piece tracking (`pieces.ts`): the cross and F2L pairs follow only the few pieces that matter, with pruning tables built by breadth-first search, so each pair is solved in its own shortest sequence.
+- Macro search (`macro.ts`): the beginner steps, OLL and PLL search over named algorithms plus turns of the top layer and return the fewest algorithms that reach the goal, so every step is an algorithm you can look up.
+- Every algorithm in `algs.ts` is written with plain face turns so the 3D cube can animate it.
+
+CFOP does OLL in two looks; the 57 single-look OLL algorithms are not included.
+
 ## How it was tested
 
-`npm test` runs 35 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
+`npm test` runs 52 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
 
 - all 18 moves and 300 random 40-move scrambles produce the same stickers in the solver's model as in the simulator,
 - every solution the solver returns actually solves the cube when replayed on the simulator, for single moves, all 324 two-move scrambles, 200 random scrambles, 200 uniformly random legal cube states (not built from scrambles), and the superflip,
 - invalid cubes (twisted corner, flipped edge, swapped pieces, wrong counts, duplicate centers) are rejected with the right error.
 
-Results from the last run: all 35 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
+The method tests (`tests/method.test.ts`) check, on the same simulator, that every named algorithm does what it should (the 21 PLL algorithms are distinct and cover all 288 last-layer cases), and that both methods solve 150 uniformly random legal cubes with each stage (cross, bottom layer, first two layers, top cross, and so on) actually finished at the end of that stage. A separate 4,000-cube run produced no failures.
+
+Results from the last run: all 52 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
 
 ## Web page
 
@@ -90,7 +123,7 @@ npm install            # installs esbuild, used only to bundle the solver
 npm run build:web      # writes web/index.html
 ```
 
-Open `web/index.html` in a browser. The built copy is also in `docs/index.html`, which GitHub Pages serves; after rebuilding, copy `web/index.html` over it. `web/cubelogic.js` (sticker geometry and move logic used by the page) is covered by `tests/web.test.ts`, which checks it against the solver's independent cube model. The page itself was exercised once in headless Chromium: solve in the worker, play back to a solved cube, validation highlighting, and no horizontal overflow at phone width.
+Open `web/index.html` in a browser. Besides the solver there are Troubleshooting and Update log pages (hash-routed, in the same file). The version number and update log live in `web/site-info.js`; bump `version` there and in `package.json` (as `X.Y.0`) and add a changelog entry for each release, and a test checks they agree. `npm run build:web` also writes the same page to `docs/index.html`, which GitHub Pages serves (a test fails if the two differ). `web/cubelogic.js` (sticker geometry and move logic used by the page) is covered by `tests/web.test.ts`, which checks it against the solver's independent cube model. The page itself was exercised once in headless Chromium: solve in the worker, play back to a solved cube, validation highlighting, and no horizontal overflow at phone width.
 
 ## Photo scanning
 
