@@ -5,7 +5,7 @@
 
 A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript. It takes the 54 sticker colors of a cube, validates that the cube is physically possible, and returns a move sequence that solves it, typically 19–23 moves.
 
-This is step one of a larger Rubik's Cube site (photo scanning, 3D animation and a WCA leaderboard are not built yet). The code lives in `src/lib/cube/` so it can be dropped into a Next.js app unchanged.
+It comes with a browser page that reads a cube from six photos, shows it in 3D and animates the solution (the WCA leaderboard is not built yet). The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
 
 ## Just want to use it?
 
