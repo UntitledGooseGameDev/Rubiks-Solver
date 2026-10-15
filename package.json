@@ -1,0 +1,18 @@
+{
+  "name": "rubiks-solver",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript",
+  "scripts": {
+    "test": "tsx --test tests/*.test.ts",
+    "solve": "tsx scripts/solve.ts",
+    "typecheck": "tsc --noEmit",
+    "build:web": "node web/build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

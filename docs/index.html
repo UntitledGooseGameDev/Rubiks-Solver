@@ -1,0 +1,1326 @@
+<title>Two-Phase Cube Solver</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  /* Layout: a stage with the 3D cube and its playback bar on the left, a stack of
+     controls (sticker net, then solution) on the right; one column on phones.
+     A deliberately dark, single-look design so the six cube colors carry the page. */
+  :root {
+    --bg: #0b0d12;
+    --raised: #12151c;
+    --sunken: #0e1117;
+    --line: #232834;
+    --fg: #e9ebf1;
+    --dim: #97a0b4;
+    --accent: #93a6ff;
+    --accent-ink: #0b0d12;
+    --danger: #ff7070;
+    --ok: #52d68a;
+    --plastic: #090a0e;
+
+    --c-U: #f3f5f8;
+    --c-R: #e5232f;
+    --c-F: #17b45b;
+    --c-D: #ffd60a;
+    --c-L: #ff7d1a;
+    --c-B: #2b6df5;
+
+    --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 var(--body);
+    padding-block: 22px 44px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+
+  header h1 {
+    font: 700 clamp(1.7rem, 4.2vw, 2.5rem)/1.05 var(--display);
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  header p { margin: 8px 0 0; color: var(--dim); max-width: 60ch; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 26px;
+    margin-top: 22px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  @media (min-width: 861px) { .stage-col { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); } }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: relative;
+    height: clamp(330px, 56vh, 540px);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 62%, rgba(147,166,255,0.10), transparent 70%),
+      var(--sunken);
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .stage.dragging { cursor: grabbing; }
+  .stage .hint {
+    position: absolute; left: 14px; bottom: 10px;
+    font: 500 12px/1 var(--mono); color: var(--dim); pointer-events: none;
+  }
+  .stage .hint-r { left: auto; right: 14px; }
+  .scene { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+  .cube { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+  .f {
+    position: absolute; left: 0; top: 0;
+    background: var(--plastic);
+    border-radius: 11%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .f[data-s="1"]::after {
+    content: ""; position: absolute; inset: 7%;
+    border-radius: 15%;
+    background: linear-gradient(145deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 52%), var(--c);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.28), inset 0 -5px 9px rgba(0,0,0,0.20);
+  }
+
+  /* ---------- playback ---------- */
+  .transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+  .tbtns { display: flex; gap: 8px; }
+  .icon-btn {
+    display: inline-grid; place-items: center;
+    width: 44px; height: 44px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--raised); color: var(--fg);
+    cursor: pointer; padding: 0;
+  }
+  .icon-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); width: 54px; }
+  .icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
+  .icon-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+  .icon-btn:not(:disabled):hover { border-color: var(--accent); }
+  .speed { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; min-width: 0; }
+  .speed label { font-size: 13px; color: var(--dim); white-space: nowrap; }
+  .speed output { font: 600 13px/1 var(--mono); min-width: 3.4ch; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+  .progress { font: 500 13px/1.3 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; flex-basis: 100%; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- panel ---------- */
+  .panel { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .block { border: 1px solid var(--line); border-radius: 18px; background: var(--raised); padding: 18px; min-width: 0; }
+  .block h2 { font: 700 1.05rem/1.2 var(--display); margin: 0 0 14px; letter-spacing: -0.01em; }
+
+  .net {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .face { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+  .face[data-f="U"] { grid-column: 2; grid-row: 1; }
+  .face[data-f="L"] { grid-column: 1; grid-row: 2; }
+  .face[data-f="F"] { grid-column: 2; grid-row: 2; }
+  .face[data-f="R"] { grid-column: 3; grid-row: 2; }
+  .face[data-f="B"] { grid-column: 4; grid-row: 2; }
+  .face[data-f="D"] { grid-column: 2; grid-row: 3; }
+  .st {
+    aspect-ratio: 1; padding: 0; border: 0; border-radius: 4px;
+    background: var(--c); cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
+    font: 700 11px/1 var(--mono); color: rgba(0,0,0,0.55);
+    display: grid; place-items: center;
+  }
+  .st.center { cursor: default; }
+  .st:not(.center):hover { filter: brightness(1.12); transform: scale(1.06); }
+  .st.flag { outline: 2px solid var(--danger); outline-offset: 1px; animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { outline-color: transparent; } }
+
+  .palette { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .sw {
+    width: 38px; height: 38px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 3px solid var(--raised); background: var(--c);
+    box-shadow: 0 0 0 1px var(--line);
+    font: 700 11px/1 var(--mono); color: rgba(0,0,0,0.55);
+  }
+  .sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--accent); }
+  .palette-note { text-align: center; color: var(--dim); font-size: 13px; margin: 8px 0 0; }
+
+  .validity { display: flex; gap: 8px; align-items: flex-start; margin: 14px 0 0; font-size: 14px; min-height: 22px; }
+  .validity i { width: 9px; height: 9px; border-radius: 50%; margin-top: 7px; flex: none; background: var(--ok); }
+  .validity.bad i { background: var(--danger); }
+  .validity.bad { color: #ffb3b3; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    font: 600 14px/1 var(--body); padding: 12px 16px; border-radius: 12px; min-height: 44px;
+    border: 1px solid var(--line); background: var(--sunken); color: var(--fg); cursor: pointer;
+  }
+  .btn:not(:disabled):hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .tools { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+  .alg label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
+  .alg .row { flex-wrap: nowrap; }
+  .alg input[type="text"] {
+    flex: 1; min-width: 0; font: 500 14px/1 var(--mono); color: var(--fg);
+    background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; min-height: 44px;
+  }
+  .alg input::placeholder { color: #626b7e; }
+  .msg { margin: 6px 0 0; font-size: 13px; color: var(--dim); min-height: 18px; overflow-wrap: anywhere; }
+  .msg.bad { color: #ffb3b3; }
+  .scramble-line { font: 500 13px/1.5 var(--mono); color: var(--dim); overflow-wrap: anywhere; margin: 0; }
+  .scramble-line b { color: var(--fg); font-weight: 600; }
+
+  .status { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; min-height: 24px; font-size: 14px; color: var(--dim); }
+  .status.bad { color: #ffb3b3; }
+  .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .chips { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 600 14px/1 var(--mono); min-width: 40px; padding: 10px 8px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--sunken); color: var(--fg); cursor: pointer; text-align: center;
+  }
+  .chip.done { color: #667088; }
+  .chip.current { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip:disabled { cursor: not-allowed; }
+  .note { margin: 18px 0 0; color: var(--dim); font-size: 13px; max-width: 70ch; }
+
+  .st.maybe { outline: 2px dashed #ffbf47; outline-offset: 1px; }
+  .maybe-note { color: #ffd88a; }
+
+  /* ---------- photo scan ---------- */
+  .scan-help { margin: 0 0 14px; color: var(--dim); font-size: 14px; max-width: 62ch; }
+  .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+  @media (max-width: 360px) { .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .slot {
+    display: grid; gap: 6px; padding: 0; border: 0; background: none; color: var(--fg);
+    cursor: pointer; text-align: left; min-width: 0; font: inherit; align-content: start;
+  }
+  .slot .thumb {
+    aspect-ratio: 1; border: 1px dashed #3a4153; border-radius: 12px; background: var(--sunken);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .slot.filled .thumb { border-style: solid; border-color: var(--line); }
+  .slot:hover .thumb, .slot.dragover .thumb { border-color: var(--accent); }
+  .slot.active .thumb { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(147,166,255,0.35); }
+  .slot .thumb canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .slot .plus { font: 600 28px/1 var(--display); color: var(--dim); }
+  .slot .name { font-weight: 600; font-size: 14px; }
+  .slot .sub { color: var(--dim); font-size: 12px; line-height: 1.3; }
+  .scan-actions { margin-top: 14px; }
+  .editor { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+  .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .editor-head strong { font: 700 1rem/1.2 var(--display); }
+  .ed-wrap {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--sunken);
+    overflow: hidden; touch-action: none; cursor: move; display: grid; place-items: center;
+  }
+  .ed-wrap canvas { display: block; }
+  .ed-controls { display: grid; gap: 10px; }
+  .ed-controls label { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; color: var(--dim); }
+  .scan-status { margin-top: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .st.flag, .spin { animation: none; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Two-Phase Cube Solver</h1>
+    <p>Scramble a cube or paint your own sticker colors, then watch the solver turn it back, one move at a time.</p>
+  </header>
+
+  <main class="layout">
+    <section class="stage-col" aria-label="3D cube">
+      <div class="stage" id="stage" aria-label="Interactive 3D cube. Drag to rotate.">
+        <div class="scene" id="scene"><div class="cube" id="cube"></div></div>
+        <span class="hint">Drag to rotate</span>
+        <span class="hint hint-r" id="moveLabel"></span>
+      </div>
+      <div class="transport" aria-label="Playback controls">
+        <div class="tbtns">
+          <button class="icon-btn" id="btnRestart" title="Back to the start" aria-label="Back to the start"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="icon-btn" id="btnBack" title="Previous move" aria-label="Previous move"><svg viewBox="0 0 24 24"><path d="M15 5v14L6 12z"/></svg></button>
+          <button class="icon-btn primary" id="btnPlay" title="Play" aria-label="Play"><svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg></button>
+          <button class="icon-btn" id="btnNext" title="Next move" aria-label="Next move"><svg viewBox="0 0 24 24"><path d="M9 5v14l9-7z"/></svg></button>
+        </div>
+        <div class="speed">
+          <label for="speed">Speed</label>
+          <input type="range" id="speed" min="0.25" max="3" step="0.25" value="1">
+          <output id="speedOut" for="speed">1.0×</output>
+        </div>
+        <div class="progress" id="progress" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <section class="block" aria-labelledby="h-scan" id="scanBlock">
+        <h2 id="h-scan">Scan from photos</h2>
+        <p class="scan-help">Hold the cube with any face up and one face toward you. Take six straight-on photos that fill the frame: Front, then turn the cube to show Right, Back and Left. Tilt it to show Up, then Down. Even light with no glare reads best.</p>
+        <div class="slots" id="slots"></div>
+        <div class="row scan-actions">
+          <button class="btn" type="button" id="btnPickSix">Add several photos</button>
+          <button class="btn" type="button" id="btnClearPhotos">Clear photos</button>
+        </div>
+        <p class="status scan-status" id="scanStatus" role="status"></p>
+        <div class="editor" id="editor" hidden>
+          <div class="editor-head"><strong id="edTitle">Front photo</strong><button class="btn" type="button" id="edClose">Done</button></div>
+          <div class="ed-wrap" id="edWrap"><canvas id="edCanvas" aria-label="Photo with the sticker grid. Drag to move the grid."></canvas></div>
+          <div class="ed-controls">
+            <label for="edSize">Size <input type="range" id="edSize" min="10" max="100" step="0.5" value="50"></label>
+            <label for="edAngle">Tilt <input type="range" id="edAngle" min="-45" max="45" step="0.5" value="0"></label>
+            <div class="row">
+              <button class="btn" type="button" id="edFit">Auto-fit grid</button>
+              <button class="btn" type="button" id="edRot">Rotate photo</button>
+              <button class="btn" type="button" id="edReplace">Replace</button>
+              <button class="btn" type="button" id="edRemove">Remove</button>
+            </div>
+            <p class="msg" id="edHelp">Drag on the photo to move the grid. Each dot should sit in the middle of a sticker, and the dot color is what was read.</p>
+          </div>
+        </div>
+        <input type="file" id="fileOne" accept="image/*" hidden>
+        <input type="file" id="fileSix" accept="image/*" multiple hidden>
+      </section>
+
+      <section class="block" aria-labelledby="h-state">
+        <h2 id="h-state">Cube state</h2>
+        <div class="net" id="net" role="group" aria-label="Sticker net. Pick a color below, then click stickers to paint."></div>
+        <div class="palette" id="palette" role="radiogroup" aria-label="Paint color"></div>
+        <p class="palette-note">Pick a color, then click any sticker. Centers are fixed.</p>
+        <p class="palette-note maybe-note" id="maybeNote" hidden>Dashed outline: the scan wasn't sure about this sticker. Compare it with your cube.</p>
+        <p class="validity" id="validity" role="status"><i></i><span></span></p>
+
+        <div class="tools">
+          <div class="row">
+            <button class="btn" id="btnScramble">Scramble</button>
+            <button class="btn" id="btnReset">Reset to solved</button>
+          </div>
+          <p class="scramble-line" id="scrambleLine"></p>
+          <form class="alg" id="algForm">
+            <label for="algInput">Apply your own moves</label>
+            <div class="row">
+              <input type="text" id="algInput" placeholder="R U R' U' F2" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button class="btn" type="submit">Apply</button>
+            </div>
+            <p class="msg" id="algMsg"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="h-sol">
+        <h2 id="h-sol">Solution</h2>
+        <button class="btn primary" id="btnSolve">Solve this cube</button>
+        <p class="status" id="solveStatus" role="status"></p>
+        <ol class="chips" id="chips" aria-label="Solution moves"></ol>
+        <p class="note">Solved with a two-phase search that runs in your browser. Moves are counted as face turns, so a half turn like R2 is one move. Most cubes take 19 to 23.</p>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script id="solver-src">
+"use strict";var CubeSolver=(()=>{var ee=Object.defineProperty;var mt=Object.getOwnPropertyDescriptor;var bt=Object.getOwnPropertyNames;var pt=Object.prototype.hasOwnProperty;var ht=(t,e,r)=>e in t?ee(t,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):t[e]=r;var dt=(t,e)=>{for(var r in e)ee(t,r,{get:e[r],enumerable:!0})},Lt=(t,e,r,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of bt(e))!pt.call(t,o)&&o!==r&&ee(t,o,{get:()=>e[o],enumerable:!(n=mt(e,o))||n.enumerable});return t};var xt=t=>Lt(ee({},"__esModule",{value:!0}),t);var U=(t,e,r)=>ht(t,typeof e!="symbol"?e+"":e,r);var Tt={};dt(Tt,{MOVE_NAMES:()=>re,SOLVED_FACELETS:()=>ne,applyMove:()=>Ye,applyMoves:()=>He,autoFit:()=>ct,classifyCube:()=>it,colorDistance:()=>Y,cubieToFacelets:()=>Ze,defaultTransform:()=>nt,gridCenters:()=>ve,hungarian:()=>Ne,identity:()=>$e,normalizeFacelets:()=>xe,parseFacelets:()=>oe,parseMoves:()=>Ke,readFaceSamples:()=>ot,rotateGrid:()=>st,rotateGridCW:()=>_e,solveCubie:()=>Te,solveFacelets:()=>tt,srgbToLab:()=>Oe});var P="URFDLB",d={URF:0,UFL:1,ULB:2,UBR:3,DFR:4,DLF:5,DBL:6,DRB:7},m={UR:0,UF:1,UL:2,UB:3,DR:4,DF:5,DL:6,DB:7,FR:8,FL:9,BL:10,BR:11},pe=["URF","UFL","ULB","UBR","DFR","DLF","DBL","DRB"],ze=["UR","UF","UL","UB","DR","DF","DL","DB","FR","FL","BL","BR"];function $e(){return{cp:[0,1,2,3,4,5,6,7],co:[0,0,0,0,0,0,0,0],ep:[0,1,2,3,4,5,6,7,8,9,10,11],eo:[0,0,0,0,0,0,0,0,0,0,0,0]}}function O(t,e){let r=new Array(8),n=new Array(8),o=new Array(12),c=new Array(12);for(let s=0;s<8;s++)r[s]=t.cp[e.cp[s]],n[s]=(t.co[e.cp[s]]+e.co[s])%3;for(let s=0;s<12;s++)o[s]=t.ep[e.ep[s]],c[s]=(t.eo[e.ep[s]]+e.eo[s])%2;return{cp:r,co:n,ep:o,eo:c}}var je=[0,0,0,0,0,0,0,0],te=[0,0,0,0,0,0,0,0,0,0,0,0],Rt=[{cp:[d.UBR,d.URF,d.UFL,d.ULB,d.DFR,d.DLF,d.DBL,d.DRB],co:je,ep:[m.UB,m.UR,m.UF,m.UL,m.DR,m.DF,m.DL,m.DB,m.FR,m.FL,m.BL,m.BR],eo:te},{cp:[d.DFR,d.UFL,d.ULB,d.URF,d.DRB,d.DLF,d.DBL,d.UBR],co:[2,0,0,1,1,0,0,2],ep:[m.FR,m.UF,m.UL,m.UB,m.BR,m.DF,m.DL,m.DB,m.DR,m.FL,m.BL,m.UR],eo:te},{cp:[d.UFL,d.DLF,d.ULB,d.UBR,d.URF,d.DFR,d.DBL,d.DRB],co:[1,2,0,0,2,1,0,0],ep:[m.UR,m.FL,m.UL,m.UB,m.DR,m.FR,m.DL,m.DB,m.UF,m.DF,m.BL,m.BR],eo:[0,1,0,0,0,1,0,0,1,1,0,0]},{cp:[d.URF,d.UFL,d.ULB,d.UBR,d.DLF,d.DBL,d.DRB,d.DFR],co:je,ep:[m.UR,m.UF,m.UL,m.UB,m.DF,m.DL,m.DB,m.DR,m.FR,m.FL,m.BL,m.BR],eo:te},{cp:[d.URF,d.ULB,d.DBL,d.UBR,d.DFR,d.UFL,d.DLF,d.DRB],co:[0,1,2,0,0,2,1,0],ep:[m.UR,m.UF,m.BL,m.UB,m.DR,m.DF,m.FL,m.DB,m.FR,m.UL,m.DL,m.BR],eo:te},{cp:[d.URF,d.UFL,d.UBR,d.DRB,d.DFR,d.DLF,d.ULB,d.DBL],co:[0,0,1,2,0,0,2,1],ep:[m.UR,m.UF,m.UL,m.BR,m.DR,m.DF,m.DL,m.BL,m.FR,m.FL,m.UB,m.DB],eo:[0,0,0,1,0,0,0,1,0,0,1,1]}],I=(()=>{let t=[];for(let e of Rt){let r=e,n=O(r,e),o=O(n,e);t.push(r,n,o)}return t})(),re=(()=>{let t=[];for(let e of P)t.push(e,e+"2",e+"'");return t})();function Ke(t){let e=[],r=t.trim().split(/\s+/).filter(Boolean);for(let n of r){let o=/^([URFDLB])([123]?)(['’]?)$/i.exec(n);if(!o)throw new Error(`Invalid move "${n}"`);let c=P.indexOf(o[1].toUpperCase()),s=o[2]?parseInt(o[2],10):1;o[3]&&(s=(4-s)%4),s%=4,s!==0&&e.push(c*3+(s-1))}return e}function Ye(t,e){return O(t,I[e])}function He(t,e){let r=t;for(let n of e)r=O(r,I[n]);return r}var D=0,A=1,T=2,M=3,S=4,k=5,he=[[8,9,20],[6,18,38],[0,36,47],[2,45,11],[29,26,15],[27,44,24],[33,53,42],[35,17,51]],de=[[5,10],[7,19],[3,37],[1,46],[32,16],[28,25],[30,43],[34,52],[23,12],[21,41],[50,39],[48,14]],Le=[[D,A,T],[D,T,S],[D,S,k],[D,k,A],[M,T,A],[M,S,T],[M,k,S],[M,A,k]],V=[[D,A],[D,T],[D,S],[D,k],[M,A],[M,T],[M,S],[M,k],[T,A],[T,S],[k,S],[k,A]],ne="UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";function Ze(t){let e=new Array(54);for(let r=0;r<6;r++)for(let n=0;n<9;n++)e[r*9+n]=r;for(let r=0;r<8;r++){let n=t.cp[r],o=t.co[r];for(let c=0;c<3;c++)e[he[r][(c+o)%3]]=Le[n][c]}for(let r=0;r<12;r++){let n=t.ep[r],o=t.eo[r];for(let c=0;c<2;c++)e[de[r][(c+o)%2]]=V[n][c]}return e.map(r=>P[r]).join("")}var We=[4,13,22,31,40,49],yt=["Up","Right","Front","Down","Left","Back"];function xe(t){let e=t.replace(/\s+/g,"");if(e.length!==54)return{ok:!1,code:"BAD_LENGTH",message:`Expected 54 stickers but got ${e.length}.`};let r=e.toUpperCase().split(""),n=We.map(f=>r[f]);if(new Set(n).size!==6)return{ok:!1,code:"BAD_CENTERS",message:"The six center stickers must all be different colors (each center identifies its face).",facelets:We};let o=new Map;n.forEach((f,i)=>o.set(f,P[i]));let c=new Map,s="";for(let f=0;f<54;f++){let i=o.get(r[f]);if(!i)return{ok:!1,code:"BAD_SYMBOL",message:`Sticker ${f+1} uses color "${r[f]}", which doesn't match any center color.`,facelets:[f]};c.set(i,(c.get(i)??0)+1),s+=i}for(let f=0;f<6;f++){let i=c.get(P[f])??0;if(i!==9)return{ok:!1,code:"BAD_COLOR_COUNT",message:`The ${yt[f]}-center color appears ${i} times; every color must appear exactly 9 times.`}}return{ok:!0,facelets:s}}function Ve(t){let e=0;for(let r=0;r<t.length;r++)for(let n=r+1;n<t.length;n++)t[r]>t[n]&&e++;return e&1}function oe(t){let e=xe(t);if(!e.ok)return e;let r=e.facelets.split("").map(a=>P.indexOf(a)),n=new Array(8).fill(-1),o=new Array(8).fill(0),c=new Array(12).fill(-1),s=new Array(12).fill(0);for(let a=0;a<8;a++){let l=he[a],u=0;for(u=0;u<3&&!(r[l[u]]===D||r[l[u]]===M);u++);if(u===3)return{ok:!1,code:"UNKNOWN_CORNER",message:`The ${pe[a]} corner has no Up/Down color, which is impossible.`,facelets:l};let b=r[l[(u+1)%3]],p=r[l[(u+2)%3]],L=!1;for(let h=0;h<8;h++)if(b===Le[h][1]&&p===Le[h][2]){n[a]=h,o[a]=u,L=!0;break}if(!L)return{ok:!1,code:"UNKNOWN_CORNER",message:`The ${pe[a]} corner shows a color combination that doesn't exist on a real cube. Check those three stickers.`,facelets:l}}for(let a=0;a<12;a++){let[l,u]=de[a],b=!1;for(let p=0;p<12;p++){if(r[l]===V[p][0]&&r[u]===V[p][1]){c[a]=p,s[a]=0,b=!0;break}if(r[l]===V[p][1]&&r[u]===V[p][0]){c[a]=p,s[a]=1,b=!0;break}}if(!b)return{ok:!1,code:"UNKNOWN_EDGE",message:`The ${ze[a]} edge shows a color combination that doesn't exist on a real cube. Check those two stickers.`,facelets:[l,u]}}let f=new Set;for(let a=0;a<8;a++){if(f.has(n[a]))return{ok:!1,code:"DUPLICATE_CORNER",message:`The ${pe[n[a]]} corner appears more than once; some corner stickers are misread.`,facelets:he[a]};f.add(n[a])}let i=new Set;for(let a=0;a<12;a++){if(i.has(c[a]))return{ok:!1,code:"DUPLICATE_EDGE",message:`The ${ze[c[a]]} edge appears more than once; some edge stickers are misread.`,facelets:de[a]};i.add(c[a])}return o.reduce((a,l)=>a+l,0)%3!==0?{ok:!1,code:"CORNER_TWIST",message:"One corner looks twisted in place. This cube state is impossible, so one corner has a misread sticker (or the cube was reassembled incorrectly)."}:s.reduce((a,l)=>a+l,0)%2!==0?{ok:!1,code:"EDGE_FLIP",message:"One edge looks flipped in place. This cube state is impossible, so one edge has swapped stickers (or the cube was reassembled incorrectly)."}:Ve(n)!==Ve(c)?{ok:!1,code:"PARITY",message:"Two pieces appear to be swapped, which cannot happen by turning the faces. Re-check the stickers for a swapped pair."}:{ok:!0,cubie:{cp:n,co:o,ep:c,eo:s},facelets:e.facelets}}var qe=2187,Xe=2048,Re=495,se=40320,ye=24,v=[0,1,2,9,10,11,4,7,13,16],Je=[1,1,2,6,24,120,720,5040,40320];function ge(t,e){let r=0;for(let n=0;n<e-1;n++){let o=0;for(let c=n+1;c<e;c++)t[c]<t[n]&&o++;r+=o*Je[e-1-n]}return r}function Ce(t,e){let r=Array.from({length:e},(c,s)=>s),n=[],o=t;for(let c=0;c<e;c++){let s=Je[e-1-c],f=Math.floor(o/s);o-=f*s,n.push(r.splice(f,1)[0])}return n}var Ue=[3840],Qe=new Int16Array(4096).fill(-1);(()=>{for(let t=0;t<4096;t++){let e=0;for(let r=0;r<12;r++)t&1<<r&&e++;e===4&&t!==3840&&Ue.push(t)}Ue.forEach((t,e)=>Qe[t]=e)})();function Ee(t){let e=0;for(let r=0;r<7;r++)e=3*e+t.co[r];return e}function Fe(t){let e=0;for(let r=0;r<11;r++)e=2*e+t.eo[r];return e}function De(t){let e=0;for(let r=0;r<12;r++)t.ep[r]>=8&&(e|=1<<r);return Qe[e]}function Ut(t){let e=z(),r=0,n=t;for(let o=6;o>=0;o--)e.co[o]=n%3,r+=e.co[o],n=Math.floor(n/3);return e.co[7]=(3-r%3)%3,e}function gt(t){let e=z(),r=0,n=t;for(let o=10;o>=0;o--)e.eo[o]=n%2,r+=e.eo[o],n=Math.floor(n/2);return e.eo[11]=r%2,e}function Ct(t){let e=z(),r=Ue[t],n=8,o=0;for(let c=0;c<12;c++)e.ep[c]=r&1<<c?n++:o++;return e}function Et(t){let e=z();return e.cp=Ce(t,8),e}function Ft(t){let e=z(),r=Ce(t,8);for(let n=0;n<8;n++)e.ep[n]=r[n];return e}function Dt(t){let e=z(),r=Ce(t,4);for(let n=0;n<4;n++)e.ep[8+n]=8+r[n];return e}function z(){return{cp:[0,1,2,3,4,5,6,7],co:[0,0,0,0,0,0,0,0],ep:[0,1,2,3,4,5,6,7,8,9,10,11],eo:[0,0,0,0,0,0,0,0,0,0,0,0]}}var Me=t=>ge(t.cp,8),Be=t=>ge(t.ep.slice(0,8),8),we=t=>ge(t.ep.slice(8,12).map(e=>e-8),4);function G(t,e,r,n){let o=e.length,c=new Uint16Array(t*o);for(let s=0;s<t;s++){let f=r(s);for(let i=0;i<o;i++)c[s*o+i]=n(O(f,I[e[i]]))}return c}function ce(t,e,r,n,o){let c=t*e,s=new Uint8Array(c).fill(255);s[0]=0;let f=0;for(;;){let i=0;for(let a=0;a<c;a++){if(s[a]!==f)continue;let l=Math.floor(a/e),u=a-l*e;for(let b=0;b<o;b++){let p=r[l*o+b]*e+n[u*o+b];s[p]===255&&(s[p]=f+1,i++)}}if(i===0)break;f++}return s}var ie=null;function et(){if(ie)return ie;let t=Array.from({length:18},(u,b)=>b),e=G(qe,t,Ut,Ee),r=G(Xe,t,gt,Fe),n=G(Re,t,Ct,De),o=ce(Re,qe,n,e,18),c=ce(Re,Xe,n,r,18),s=G(se,v,Et,Me),f=G(se,v,Ft,Be),i=G(ye,v,Dt,we),a=ce(se,ye,s,i,v.length),l=ce(se,ye,f,i,v.length);return ie={twistMove:e,flipMove:r,sliceMove:n,pruneSliceTwist:o,pruneSliceFlip:c,cornerPermMove:s,udEdgePermMove:f,slicePermMove:i,pruneCornerSlice:a,pruneUdEdgeSlice:l},ie}var $=()=>typeof performance<"u"?performance.now():Date.now(),Ae=class{constructor(e,r,n,o){U(this,"start",e);U(this,"targetLength",r);U(this,"timeoutMs",n);U(this,"T",et());U(this,"path1",new Array(40).fill(0));U(this,"path2",new Array(40).fill(0));U(this,"nodes",0);U(this,"deadline",1/0);U(this,"timedOut",!1);U(this,"bestLen");U(this,"best",null);this.bestLen=o+1}run(){let e=Ee(this.start),r=Fe(this.start),n=De(this.start);for(let o=0;o<this.bestLen&&!(this.dfs1(e,r,n,0,o,-1)||this.best&&$()>this.deadline);o++);return this.best}checkTime(){(++this.nodes&16383)===0&&this.best&&$()>this.deadline&&(this.timedOut=!0)}dfs1(e,r,n,o,c,s){if(o===c)return e===0&&r===0&&n===0?this.tryPhase2(o,s):!1;let f=this.T;for(let i=0;i<6;i++)if(i!==s&&!(s>=0&&i%3===s%3&&i<s))for(let a=0;a<3;a++){let l=i*3+a,u=f.twistMove[e*18+l],b=f.flipMove[r*18+l],p=f.sliceMove[n*18+l],L=f.pruneSliceTwist[p*2187+u],h=f.pruneSliceFlip[p*2048+b];if(!(o+1+(L>h?L:h)>c)&&(this.path1[o]=l,this.dfs1(u,b,p,o+1,c,i)||(this.checkTime(),this.timedOut)))return!0}return!1}tryPhase2(e,r){let n=this.start;for(let l=0;l<e;l++)n=O(n,I[this.path1[l]]);let o=Me(n),c=Be(n),s=we(n),f=this.T,i=Math.max(f.pruneCornerSlice[o*24+s],f.pruneUdEdgeSlice[c*24+s]),a=Math.min(18,this.bestLen-1-e);for(let l=i;l<=a;l++)if(this.dfs2(o,c,s,0,l,r))return this.best=[...this.path1.slice(0,e),...this.path2.slice(0,l)],this.bestLen=this.best.length,this.deadline===1/0&&(this.deadline=$()+this.timeoutMs),this.bestLen<=this.targetLength;return!1}dfs2(e,r,n,o,c,s){if(o===c)return e===0&&r===0&&n===0;let f=this.T;for(let i=0;i<v.length;i++){let a=v[i],l=a/3|0;if(l===s||s>=0&&l%3===s%3&&l<s)continue;let u=f.cornerPermMove[e*10+i],b=f.udEdgePermMove[r*10+i],p=f.slicePermMove[n*10+i],L=f.pruneCornerSlice[u*24+p],h=f.pruneUdEdgeSlice[b*24+p];if(!(o+1+(L>h?L:h)>c)&&(this.path2[o]=a,this.dfs2(u,b,p,o+1,c,l)))return!0}return!1}};function Te(t,e={}){let n=new Ae(t,e.targetLength??0,e.timeoutMs??1e3,e.maxLength??30).run();if(!n)throw new Error("No solution found within maxLength; try a larger maxLength.");return n}function tt(t,e={}){let r=oe(t);if(!r.ok)return r;let n=$();if(r.facelets===ne)return{ok:!0,moves:[],solution:"",length:0,ms:0};let c=Te(r.cubie,e).map(s=>re[s]);return{ok:!0,moves:c,solution:c.join(" "),length:c.length,ms:$()-n}}var rt="URFDLB";function Oe(t,e,r){let n=L=>{let h=L/255;return h<=.04045?h/12.92:Math.pow((h+.055)/1.055,2.4)},o=n(t),c=n(e),s=n(r),f=(.4124564*o+.3575761*c+.1804375*s)/.95047,i=.2126729*o+.7151522*c+.072175*s,a=(.0193339*o+.119192*c+.9503041*s)/1.08883,l=L=>L>.008856?Math.cbrt(L):7.787*L+16/116,u=l(f),b=l(i),p=l(a);return[116*b-16,500*(u-b),200*(b-p)]}function Y(t,e){let r=.6*(t[0]-e[0]),n=t[1]-e[1],o=t[2]-e[2];return Math.sqrt(r*r+n*n+o*o)}function ve(t){let e=t.size/3,r=t.angle*Math.PI/180,n=Math.cos(r),o=Math.sin(r),c=[];for(let s=0;s<3;s++)for(let f=0;f<3;f++){let i=(f-1)*e,a=(s-1)*e;c.push([t.cx+i*n-a*o,t.cy+i*o+a*n])}return c}function nt(t){return{cx:t.width/2,cy:t.height/2,size:.7*Math.min(t.width,t.height),angle:0}}function Se(t){t.sort((r,n)=>r-n);let e=t.length;return e%2?t[(e-1)/2]:(t[e/2-1]+t[e/2])/2}function Mt(t,e,r,n){let o=Math.max(0,Math.round(e-n)),c=Math.min(t.width-1,Math.round(e+n)),s=Math.max(0,Math.round(r-n)),f=Math.min(t.height-1,Math.round(r+n)),i=[],a=[],l=[];for(let u=s;u<=f;u++)for(let b=o;b<=c;b++){let p=(u*t.width+b)*4;i.push(t.data[p]),a.push(t.data[p+1]),l.push(t.data[p+2])}return i.length?[Se(i),Se(a),Se(l)]:[0,0,0]}function ot(t,e){let r=Math.max(1.5,e.size/3*.2);return ve(e).map(([n,o])=>{let c=Mt(t,n,o,r);return{rgb:c,lab:Oe(c[0],c[1],c[2])}})}function _e(t){let e=new Array(9);for(let r=0;r<3;r++)for(let n=0;n<3;n++)e[r*3+n]=t[(2-n)*3+r];return e}function st(t,e){let r=t;for(let n=0;n<(e%4+4)%4;n++)r=_e(r);return r}function Bt(t,e){let r=Math.max(t.width,t.height);if(r<=e)return{img:t,scale:1};let n=e/r,o=Math.max(1,Math.round(t.width*n)),c=Math.max(1,Math.round(t.height*n)),s=new Uint8ClampedArray(o*c*4);for(let f=0;f<c;f++){let i=Math.floor(f/n),a=Math.max(i+1,Math.min(t.height,Math.floor((f+1)/n)));for(let l=0;l<o;l++){let u=Math.floor(l/n),b=Math.max(u+1,Math.min(t.width,Math.floor((l+1)/n))),p=0,L=0,h=0,R=0;for(let x=i;x<a;x++)for(let B=u;B<b;B++){let y=(x*t.width+B)*4;p+=t.data[y],L+=t.data[y+1],h+=t.data[y+2],R++}let E=(f*o+l)*4;s[E]=p/R,s[E+1]=L/R,s[E+2]=h/R,s[E+3]=255}}return{img:{width:o,height:c,data:s},scale:n}}function wt(t,e,r){let n=e<0?0:e>t.width-1?t.width-1:Math.round(e),c=((r<0?0:r>t.height-1?t.height-1:Math.round(r))*t.width+n)*4;return(.299*t.data[c]+.587*t.data[c+1]+.114*t.data[c+2])/255}var At=new Float64Array(9),ae=[[0,0],[.12,0],[-.12,0],[0,.12],[0,-.12]],ke=.06,ue=[-3,-2,-1,0,1,2,3];function K(t,e,r,n,o,c){let s=n/3,f=o*Math.PI/180,i=Math.cos(f),a=Math.sin(f),l=-a,u=i,b=0,p=0;for(let y=0;y<3;y++)for(let g=0;g<3;g++){let w=e+(g-1)*s*i+(y-1)*s*l,H=r+(g-1)*s*a+(y-1)*s*u,j=0,Z=0,q=0,X=0,J=0,W=0;for(let N=0;N<5;N++){let ft=Math.round(Math.min(t.width-1,Math.max(0,w+ae[N][0]*s*i+ae[N][1]*s*l))),le=(Math.round(Math.min(t.height-1,Math.max(0,H+ae[N][0]*s*a+ae[N][1]*s*u)))*t.width+ft)*4,fe=t.data[le],me=t.data[le+1],be=t.data[le+2];j+=fe,Z+=me,q+=be,X+=fe*fe,J+=me*me,W+=be*be}let C=j/5,_=Z/5,F=q/5,at=(X/5-C*C+J/5-_*_+W/5-F*F)/3,Q=Math.max(C,_,F),ut=Math.min(C,_,F),Pe=Q>0?(Q-ut)/Q:0,Ie=Q/255,lt=Pe>.4&&Ie>.2?1:Pe<.3&&Ie>.55?.9:.15;b+=Math.exp(-Math.max(0,at)/400)*lt;let Ge=(.299*C+.587*_+.114*F)/255;At[y*3+g]=Ge,p+=Ge}let L=Math.max(p/9,.25),h=0,R=ue.map(y=>{let g=Math.exp(-.5*(y*ke/c)**2);return h+=g,g}),E=0,x=0,B=[-1,-.5,0,.5,1];for(let y of[-1.5,-.5,.5,1.5])for(let g of B)for(let w=0;w<2;w++){let H=w===0?y:g,j=w===0?g:y,Z=e+H*s*i+j*s*l,q=r+H*s*a+j*s*u,X=(w===0?i:l)*s*ke,J=(w===0?a:u)*s*ke,W=0;for(let C=0;C<ue.length;C++){let _=wt(t,Z+ue[C]*X,q+ue[C]*J),F=(L-_)/L;W+=R[C]*(F<0?0:F>1?1:F)}E+=W/h,x++}return b+14*(E/x)}function ct(t){let{img:e,scale:r}=Bt(t,160),n=e.width,o=e.height,c=Math.min(n,o),s=Math.max(2,c*.04),f=[];for(let l=.4*c;l<=.98*c;l+=s)for(let u=-20;u<=20;u+=10)for(let b=.25*o;b<=.75*o;b+=s)for(let p=.25*n;p<=.75*n;p+=s)f.push({cx:p,cy:b,size:l,angle:u,s:K(e,p,b,l,u,.1)});f.sort((l,u)=>u.s-l.s);let i=[];for(let l of f){if(i.length>=3)break;i.every(u=>Math.hypot(u.cx-l.cx,u.cy-l.cy)>.08*c||Math.abs(u.size-l.size)>.1*c)&&i.push(l)}let a={...i[0],s:-1/0};for(let l of i){let u={...l};u.s=K(e,u.cx,u.cy,u.size,u.angle,.06);for(let[p,L]of[[2,.06],[1,.05],[.5,.045]]){u.s=K(e,u.cx,u.cy,u.size,u.angle,L);let h=!0;for(;h;){h=!1;for(let R of["cx","cy","size","angle"])for(let E of[-1,1]){let x={...u,[R]:u[R]+E*p},B=K(e,x.cx,x.cy,x.size,x.angle,L);B>u.s+1e-9&&(u.cx=x.cx,u.cy=x.cy,u.size=x.size,u.angle=x.angle,u.s=B,h=!0)}}}let b=K(e,u.cx,u.cy,u.size,u.angle,.045);b>a.s&&(a={...u,s:b})}return{transform:{cx:a.cx/r,cy:a.cy/r,size:a.size/r,angle:a.angle},score:a.s}}function Ne(t){let e=t.length,r=1/0,n=new Array(e+1).fill(0),o=new Array(e+1).fill(0),c=new Array(e+1).fill(0),s=new Array(e+1).fill(0);for(let i=1;i<=e;i++){c[0]=i;let a=0,l=new Array(e+1).fill(r),u=new Array(e+1).fill(!1);do{u[a]=!0;let b=c[a],p=r,L=0;for(let h=1;h<=e;h++){if(u[h])continue;let R=t[b-1][h-1]-n[b]-o[h];R<l[h]&&(l[h]=R,s[h]=a),l[h]<p&&(p=l[h],L=h)}for(let h=0;h<=e;h++)u[h]?(n[c[h]]+=p,o[h]-=p):l[h]-=p;a=L}while(c[a]!==0);do{let b=s[a];c[a]=c[b],a=b}while(a)}let f=new Array(e);for(let i=1;i<=e;i++)f[c[i]-1]=i-1;return f}function it(t){if(t.length!==6||t.some(i=>i.length!==9))throw new Error("classifyCube needs 6 faces of 9 samples");let e=[];for(let i of t)for(let a of i)e.push(a.lab);let r=t.map(i=>[...i[4].lab]),n=[];for(let i=0;i<54;i++)i%9!==4&&n.push(i);let o=new Array(n.length).fill(0);for(let i=0;i<4;i++){let a=n.map(u=>{let b=new Array(48);for(let p=0;p<48;p++)b[p]=Y(e[u],r[Math.floor(p/8)]);return b});o=Ne(a).map(u=>Math.floor(u/8));for(let u=0;u<6;u++){let b=[...e[u*9+4]],p=1;n.forEach((L,h)=>{o[h]===u&&(b[0]+=e[L][0],b[1]+=e[L][1],b[2]+=e[L][2],p++)}),r[u]=[b[0]/p,b[1]/p,b[2]/p]}}let c=new Array(54);for(let i=0;i<6;i++)c[i*9+4]=rt[i];let s=[];n.forEach((i,a)=>{c[i]=rt[o[a]];let l=r.map(h=>Y(e[i],h)),u=l[o[a]],b=[...l].sort((h,R)=>h-R),p=l.indexOf(b[0]),L=p===o[a]?b[1]:b[0];(p!==o[a]||L<u*1.5+4)&&s.push(i)});let f=[];for(let i=0;i<6;i++)for(let a=i+1;a<6;a++)Y(t[i][4].lab,t[a][4].lab)<12&&f.push([i,a]);return{facelets:c.join(""),uncertain:s,similarCenters:f}}return xt(Tt);})();
+
+</script>
+<script>
+/**
+ * Page-side cube logic: sticker geometry, move permutations, notation parsing.
+ * Works on any 54-sticker string (even impossible ones the user painted), so
+ * moves can be animated on a cube that has not been validated.
+ * Plain JS so it can be inlined into the page and also required from tests.
+ */
+const CubeLogic = (() => {
+  const LETTERS = 'URFDLB';
+  const SOLVED = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB';
+  /** Outward axis of each face, world coords: x right, y up, z toward the viewer. */
+  const AXES = [[0, 1, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0], [-1, 0, 0], [0, 0, -1]];
+
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a, b) => [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+
+  /** Rotate v about unit axis k by phi radians (right-hand rule). */
+  function rotate(v, k, phi) {
+    const c = Math.cos(phi);
+    const s = Math.sin(phi);
+    const kv = dot(k, v);
+    const kxv = cross(k, v);
+    return [0, 1, 2].map((i) => v[i] * c + kxv[i] * s + k[i] * kv * (1 - c));
+  }
+
+  /** Exact integer clockwise quarter turn (as seen from outside) about unit axis k. */
+  function quarterCW(v, k) {
+    const kxv = cross(k, v);
+    const kv = dot(k, v);
+    return [0, 1, 2].map((i) => -kxv[i] + k[i] * kv + 0);
+  }
+
+  /** Cubie position (-1..1 each axis) and outward normal of facelet i (URFDLB reading order). */
+  function faceletGeometry(i) {
+    const face = Math.floor(i / 9);
+    const r = Math.floor((i % 9) / 3);
+    const c = i % 3;
+    switch (face) {
+      case 0: return { pos: [c - 1, 1, r - 1], nor: [0, 1, 0] };
+      case 1: return { pos: [1, 1 - r, 1 - c], nor: [1, 0, 0] };
+      case 2: return { pos: [c - 1, 1 - r, 1], nor: [0, 0, 1] };
+      case 3: return { pos: [c - 1, -1, 1 - r], nor: [0, -1, 0] };
+      case 4: return { pos: [-1, 1 - r, c - 1], nor: [-1, 0, 0] };
+      default: return { pos: [1 - c, 1 - r, -1], nor: [0, 0, -1] };
+    }
+  }
+
+  const key = (p, n) => p.join(',') + '|' + n.join(',');
+  const GEO = Array.from({ length: 54 }, (_, i) => faceletGeometry(i));
+  const INDEX = new Map(GEO.map((g, i) => [key(g.pos, g.nor), i]));
+
+  /** PERMS[face*3 + power-1][i] = where the sticker at i ends up. */
+  const PERMS = [];
+  for (let face = 0; face < 6; face++) {
+    for (let power = 1; power <= 3; power++) {
+      const perm = new Array(54);
+      for (let i = 0; i < 54; i++) {
+        const g = GEO[i];
+        if (dot(g.pos, AXES[face]) === 1) {
+          let p = g.pos;
+          let n = g.nor;
+          for (let q = 0; q < power; q++) {
+            p = quarterCW(p, AXES[face]);
+            n = quarterCW(n, AXES[face]);
+          }
+          perm[i] = INDEX.get(key(p, n));
+        } else {
+          perm[i] = i;
+        }
+      }
+      PERMS.push(perm);
+    }
+  }
+
+  function applyMove(state, face, power) {
+    const perm = PERMS[face * 3 + power - 1];
+    const out = new Array(54);
+    for (let i = 0; i < 54; i++) out[perm[i]] = state[i];
+    return out.join('');
+  }
+
+  function moveName(m) {
+    return LETTERS[m.face] + ['', '2', "'"][m.power - 1];
+  }
+
+  function invertMove(m) {
+    return { face: m.face, power: m.power === 2 ? 2 : 4 - m.power };
+  }
+
+  /** Parse "R U R' U' F2". Returns an array of {face, power}; throws Error on a bad token. */
+  function parseAlg(text) {
+    const out = [];
+    for (const tok of text.trim().split(/\s+/).filter(Boolean)) {
+      const m = /^([URFDLB])([123]?)(['’]?)$/i.exec(tok);
+      if (!m) throw new Error('"' + tok + '" is not a valid move. Use U R F D L B with an optional 2 or \'.');
+      const face = LETTERS.indexOf(m[1].toUpperCase());
+      let power = m[2] ? parseInt(m[2], 10) : 1;
+      if (m[3]) power = (4 - power) % 4;
+      power %= 4;
+      if (power === 0) continue;
+      out.push({ face, power });
+    }
+    return out;
+  }
+
+  function applyMoves(state, moves) {
+    let s = state;
+    for (const m of moves) s = applyMove(s, m.face, m.power);
+    return s;
+  }
+
+  function applyAlg(state, text) {
+    return applyMoves(state, parseAlg(text));
+  }
+
+  /** Random scramble: no two consecutive turns of the same face. */
+  function scramble(length, rand) {
+    const rnd = rand || Math.random;
+    const out = [];
+    let last = -1;
+    while (out.length < length) {
+      const face = Math.floor(rnd() * 6);
+      if (face === last) continue;
+      last = face;
+      out.push({ face, power: 1 + Math.floor(rnd() * 3) });
+    }
+    return out;
+  }
+
+  function isSolved(state) {
+    for (let f = 0; f < 6; f++) {
+      for (let i = 1; i < 9; i++) if (state[f * 9 + i] !== state[f * 9]) return false;
+    }
+    return true;
+  }
+
+  /** The 156 renderable cubie faces (26 cubies x 6); idx is the facelet index, or -1 for plain plastic. */
+  function renderFaces() {
+    const out = [];
+    for (let x = -1; x <= 1; x++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+          if (x === 0 && y === 0 && z === 0) continue;
+          const c = [x, y, z];
+          for (const n of AXES) {
+            out.push({ c, n, idx: dot(c, n) === 1 ? INDEX.get(key(c, n)) : -1 });
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  return {
+    LETTERS, SOLVED, AXES, GEO, dot, cross, rotate,
+    applyMove, applyMoves, applyAlg, parseAlg, moveName, invertMove, scramble, isSolved, renderFaces,
+  };
+})();
+
+
+</script>
+<script>
+/**
+ * Photo upload UI: six photo slots, an editor to adjust the sticker grid, and
+ * the hand-off to the cube view and solver (window.CubeApp, defined by the main script).
+ * Depends on the global CubeSolver bundle (scanner + solver).
+ */
+(function () {
+  'use strict';
+  var CS = CubeSolver;
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Capture order, with which cube face each photo shows and how it should be held.
+  var SLOTS = [
+    { name: 'Front', face: 2, sub: 'Up face at the top' },
+    { name: 'Right', face: 1, sub: 'Up face at the top' },
+    { name: 'Back', face: 5, sub: 'Up face at the top' },
+    { name: 'Left', face: 4, sub: 'Up face at the top' },
+    { name: 'Up', face: 0, sub: 'Front face at the bottom' },
+    { name: 'Down', face: 3, sub: 'Front face at the top' }
+  ];
+  var LETTERS = 'URFDLB';
+  var NOMINAL = {
+    U: [243, 245, 248], R: [229, 35, 47], F: [23, 180, 91], D: [255, 214, 10], L: [255, 125, 26], B: [43, 109, 245]
+  };
+  var MAX_DIM = 640;
+
+  var slots = [null, null, null, null, null, null];
+  var tiles = [];
+  var active = -1;
+  var reading = null;
+  var schemeRGB = {};
+  LETTERS.split('').forEach(function (l) { schemeRGB[l] = NOMINAL[l]; });
+
+  function rgbCss(rgb) { return 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')'; }
+
+  // ---------------------------------------------------------------- status
+  function setStatus(text, kind, spinner) {
+    var el = $('scanStatus');
+    el.className = 'status scan-status' + (kind === 'bad' ? ' bad' : '');
+    el.innerHTML = '';
+    if (spinner) { var s = document.createElement('span'); s.className = 'spin'; el.appendChild(s); }
+    var t = document.createElement('span'); t.textContent = text; el.appendChild(t);
+  }
+
+  // ------------------------------------------------------- image geometry
+  // A photo can be turned in quarter turns clockwise (s.rot) so "up" in the photo is up.
+  function dispDims(s) { return s.rot % 2 ? [s.image.height, s.image.width] : [s.image.width, s.image.height]; }
+  function toDisp(s, x, y) {
+    var w = s.image.width, h = s.image.height;
+    switch (s.rot) { case 0: return [x, y]; case 1: return [h - y, x]; case 2: return [w - x, h - y]; default: return [y, w - x]; }
+  }
+  function fromDisp(s, X, Y) {
+    var w = s.image.width, h = s.image.height;
+    switch (s.rot) { case 0: return [X, Y]; case 1: return [Y, h - X]; case 2: return [w - X, h - Y]; default: return [w - Y, X]; }
+  }
+  function gridPoint(t, u, v) {
+    var c = t.size / 3, a = t.angle * Math.PI / 180;
+    return [t.cx + u * c * Math.cos(a) - v * c * Math.sin(a), t.cy + u * c * Math.sin(a) + v * c * Math.cos(a)];
+  }
+
+  // ------------------------------------------------------------- drawing
+  function draw(canvas, s) {
+    var d = dispDims(s);
+    canvas.width = d[0]; canvas.height = d[1];
+    var ctx = canvas.getContext('2d');
+    ctx.save();
+    var w = s.image.width, h = s.image.height;
+    if (s.rot === 0) ctx.setTransform(1, 0, 0, 1, 0, 0);
+    else if (s.rot === 1) ctx.setTransform(0, 1, -1, 0, h, 0);
+    else if (s.rot === 2) ctx.setTransform(-1, 0, 0, -1, w, h);
+    else ctx.setTransform(0, -1, 1, 0, 0, w);
+    ctx.drawImage(s.canvas, 0, 0);
+    ctx.restore();
+
+    var lw = Math.max(2, d[0] / 200);
+    function line(p, q) {
+      var a = toDisp(s, p[0], p[1]), b = toDisp(s, q[0], q[1]);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    }
+    var segs = [];
+    [-1.5, -0.5, 0.5, 1.5].forEach(function (k) {
+      segs.push([gridPoint(s.t, k, -1.5), gridPoint(s.t, k, 1.5)]);
+      segs.push([gridPoint(s.t, -1.5, k), gridPoint(s.t, 1.5, k)]);
+    });
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = lw * 2.4;
+    segs.forEach(function (sg) { line(sg[0], sg[1]); });
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = lw;
+    segs.forEach(function (sg) { line(sg[0], sg[1]); });
+
+    var centers = CS.gridCenters(s.t);
+    var r = Math.max(5, (s.t.size / 3) * 0.14);
+    centers.forEach(function (c, k) {
+      var p = toDisp(s, c[0], c[1]);
+      var fill = s.letters ? rgbCss(schemeRGB[s.letters[k]]) : rgbCss(s.samples[k].rgb);
+      ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2);
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.lineWidth = lw * 1.6; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.lineWidth = lw * 0.7; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
+    });
+  }
+
+  // -------------------------------------------------------------- tiles
+  function buildTiles() {
+    var host = $('slots');
+    SLOTS.forEach(function (def, i) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'slot'; b.dataset.i = i;
+      b.innerHTML = '<span class="thumb"><span class="plus">+</span></span>' +
+        '<span class="name"></span><span class="sub"></span>';
+      b.querySelector('.name').textContent = def.name;
+      b.querySelector('.sub').textContent = def.sub;
+      b.addEventListener('click', function () {
+        if (slots[i]) openEditor(i); else chooseFor(i);
+      });
+      host.appendChild(b);
+      tiles.push(b);
+      renderTile(i);
+    });
+    host.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      var t = e.target.closest ? e.target.closest('.slot') : null;
+      tiles.forEach(function (x) { x.classList.toggle('dragover', x === t); });
+    });
+    host.addEventListener('dragleave', function () { tiles.forEach(function (x) { x.classList.remove('dragover'); }); });
+    host.addEventListener('drop', function (e) {
+      e.preventDefault();
+      tiles.forEach(function (x) { x.classList.remove('dragover'); });
+      var t = e.target.closest ? e.target.closest('.slot') : null;
+      var files = Array.prototype.slice.call(e.dataTransfer ? e.dataTransfer.files : []);
+      if (!files.length) return;
+      var start = t ? +t.dataset.i : Math.max(0, slots.findIndex(function (s) { return !s; }));
+      addFiles(start, files);
+    });
+  }
+
+  function renderTile(i) {
+    var tile = tiles[i], s = slots[i], thumb = tile.querySelector('.thumb');
+    tile.classList.toggle('filled', !!s);
+    tile.classList.toggle('active', i === active);
+    tile.setAttribute('aria-label', SLOTS[i].name + ' photo: ' + (s ? 'added. Open to adjust.' : 'empty. Choose a file.'));
+    if (!s) {
+      thumb.innerHTML = '<span class="plus">+</span>';
+      return;
+    }
+    var canvas = thumb.querySelector('canvas');
+    if (!canvas) { thumb.innerHTML = ''; canvas = document.createElement('canvas'); thumb.appendChild(canvas); }
+    draw(canvas, s);
+  }
+
+  // ------------------------------------------------------------ decoding
+  function decodeFile(file) {
+    return (async function () {
+      var bmp = null;
+      try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+      catch (e1) { try { bmp = await createImageBitmap(file); } catch (e2) { bmp = null; } }
+      var src, w, h;
+      if (bmp) { src = bmp; w = bmp.width; h = bmp.height; }
+      else {
+        src = await new Promise(function (resolve, reject) {
+          var img = new Image(), url = URL.createObjectURL(file);
+          img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+          img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+          img.src = url;
+        });
+        w = src.naturalWidth; h = src.naturalHeight;
+      }
+      if (!w || !h) throw new Error('empty image');
+      var k = Math.min(1, MAX_DIM / Math.max(w, h));
+      var cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+      var canvas = document.createElement('canvas');
+      canvas.width = cw; canvas.height = ch;
+      var ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(src, 0, 0, cw, ch);
+      if (bmp && bmp.close) bmp.close();
+      var px = ctx.getImageData(0, 0, cw, ch);
+      return { canvas: canvas, image: { width: cw, height: ch, data: px.data } };
+    })();
+  }
+
+  var tick = function () { return new Promise(function (r) { setTimeout(r, 0); }); };
+
+  function addFiles(start, files) {
+    return (async function () {
+      var n = 0, failed = [];
+      for (var k = 0; k < files.length && start + k < 6; k++) {
+        var file = files[k], i = start + k;
+        if (file.type && file.type.indexOf('image/') !== 0) { failed.push(file.name); continue; }
+        setStatus('Reading ' + SLOTS[i].name + ' photo (' + file.name + ')…', 'info', true);
+        await tick();
+        try {
+          var d = await decodeFile(file);
+          var fit = CS.autoFit(d.image);
+          slots[i] = { name: file.name, canvas: d.canvas, image: d.image, t: fit.transform, rot: 0, samples: null, letters: null };
+          sample(slots[i]);
+          n++;
+        } catch (err) { failed.push(file.name); }
+        await tick();
+      }
+      if (files.length > 6 - start) failed.push('(only ' + (6 - start) + ' more photo' + (6 - start === 1 ? '' : 's') + ' fit from here)');
+      if (active >= 0 && slots[active]) openEditor(active); else if (active >= 0) closeEditor();
+      refresh(true);
+      if (failed.length) {
+        var msg = "Couldn't read " + failed.join(', ') + '. Use JPG or PNG photos.';
+        if (n === 0) setStatus(msg, 'bad');
+        else $('scanStatus').lastChild.textContent += ' ' + msg;
+      }
+    })();
+  }
+
+  // ---------------------------------------------------- reading + solving
+  function sample(s) { s.samples = CS.readFaceSamples(s.image, s.t); }
+
+  function applyScheme(centerLabs) {
+    // Snap each center color to the nearest standard cube color so the 3D cube looks like yours.
+    var nomLab = LETTERS.split('').map(function (l) { return CS.srgbToLab(NOMINAL[l][0], NOMINAL[l][1], NOMINAL[l][2]); });
+    var cost = centerLabs.map(function (lab) { return nomLab.map(function (n) { return CS.colorDistance(lab, n); }); });
+    var a = CS.hungarian(cost);
+    var ok = a.every(function (j, f) { return cost[f][j] < 50; });
+    LETTERS.split('').forEach(function (letter, f) {
+      var rgb = ok ? NOMINAL[LETTERS[a[f]]] : NOMINAL[letter];
+      schemeRGB[letter] = rgb;
+      document.documentElement.style.setProperty('--c-' + letter, rgbCss(rgb));
+    });
+  }
+  function resetScheme() {
+    LETTERS.split('').forEach(function (l) {
+      schemeRGB[l] = NOMINAL[l];
+      document.documentElement.style.removeProperty('--c-' + l);
+    });
+  }
+
+  /** Re-read everything. `final` is true when a change is finished (a drag ending, a photo added). */
+  function refresh(final) {
+    var count = slots.filter(Boolean).length;
+    reading = null;
+    slots.forEach(function (s) { if (s) s.letters = null; });
+
+    if (count === 6) {
+      var faces = new Array(6);
+      slots.forEach(function (s, i) { faces[SLOTS[i].face] = CS.rotateGrid(s.samples, s.rot); });
+      reading = CS.classifyCube(faces);
+      slots.forEach(function (s, i) {
+        var upright = reading.facelets.slice(SLOTS[i].face * 9, SLOTS[i].face * 9 + 9).split('');
+        s.letters = CS.rotateGrid(upright, (4 - s.rot) % 4);
+      });
+      applyScheme(faces.map(function (f) { return f[4].lab; }));
+    }
+
+    slots.forEach(function (s, i) { if (s) renderTile(i); else renderTile(i); });
+    if (active >= 0 && slots[active]) draw($('edCanvas'), slots[active]);
+
+    if (count < 6) {
+      if (final) setStatus(count === 0 ? '' : count + ' of 6 photos added. Add the rest to read the whole cube.', 'info');
+      return;
+    }
+
+    var valid = CS.parseFacelets(reading.facelets).ok;
+    if (final) {
+      var msg;
+      if (reading.similarCenters.length) {
+        var pair = reading.similarCenters[0];
+        var names = SLOTS.filter(function (d) { return d.face === pair[0] || d.face === pair[1]; }).map(function (d) { return d.name; });
+        msg = 'The ' + names.join(' and ') + ' photos show the same center color. Check that each photo is in the right slot.';
+        setStatus(msg, 'bad');
+      } else if (!valid) {
+        setStatus('Read all six photos, but the colors don’t make a possible cube. Adjust a photo’s grid, or fix the highlighted stickers below.', 'bad');
+      } else if (reading.uncertain.length) {
+        setStatus('Read all six photos. ' + reading.uncertain.length + ' sticker' + (reading.uncertain.length === 1 ? ' is' : 's are') + ' marked with a dashed outline below; compare ' + (reading.uncertain.length === 1 ? 'it' : 'them') + ' with your cube.', 'info');
+      } else {
+        setStatus('Read all six photos.', 'info');
+      }
+    }
+    if (window.CubeApp) window.CubeApp.loadScanned(reading.facelets, reading.uncertain, final);
+  }
+
+  // -------------------------------------------------------------- editor
+  var drag = null;
+
+  function openEditor(i) {
+    active = i;
+    var s = slots[i];
+    $('editor').hidden = false;
+    $('edTitle').textContent = SLOTS[i].name + ' photo · ' + SLOTS[i].sub.toLowerCase();
+    var m = Math.min(s.image.width, s.image.height);
+    $('edSize').min = String(Math.round(0.2 * m)); $('edSize').max = String(Math.round(1.1 * m));
+    syncEditor();
+    tiles.forEach(function (_, k) { renderTile(k); });
+  }
+  function closeEditor() {
+    active = -1; drag = null;
+    $('editor').hidden = true;
+    tiles.forEach(function (_, k) { renderTile(k); });
+  }
+  function syncEditor() {
+    var s = slots[active];
+    if (!s) return;
+    $('edSize').value = s.t.size;
+    $('edAngle').value = s.t.angle;
+    var canvas = $('edCanvas');
+    draw(canvas, s);
+    var wrapW = $('edWrap').clientWidth || 320;
+    var k = Math.min(wrapW / canvas.width, 420 / canvas.height);
+    canvas.style.width = Math.round(canvas.width * k) + 'px';
+    canvas.style.height = Math.round(canvas.height * k) + 'px';
+  }
+  function changed(final) {
+    var s = slots[active];
+    if (!s) return;
+    sample(s);
+    refresh(final);
+    $('edSize').value = s.t.size; $('edAngle').value = s.t.angle;
+  }
+  function pointerImg(e) {
+    var s = slots[active], canvas = $('edCanvas'), r = canvas.getBoundingClientRect();
+    return fromDisp(s, (e.clientX - r.left) / r.width * canvas.width, (e.clientY - r.top) / r.height * canvas.height);
+  }
+
+  function chooseFor(i) {
+    var input = $('fileOne');
+    input.dataset.slot = i;
+    input.click();
+  }
+
+  function init() {
+    buildTiles();
+
+    $('fileOne').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      var i = +e.target.dataset.slot;
+      e.target.value = '';
+      if (f) addFiles(i, [f]);
+    });
+    $('btnPickSix').addEventListener('click', function () { $('fileSix').click(); });
+    $('fileSix').addEventListener('change', function (e) {
+      var files = Array.prototype.slice.call(e.target.files || []);
+      e.target.value = '';
+      if (!files.length) return;
+      files.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+      addFiles(0, files.slice(0, 6)).then(function () {
+        if (files.length >= 2) setStatusAppend('Photos were assigned in name order: ' + SLOTS.map(function (d) { return d.name; }).join(', ') + '.');
+      });
+    });
+    $('btnClearPhotos').addEventListener('click', function () {
+      slots = [null, null, null, null, null, null];
+      reading = null; closeEditor(); resetScheme();
+      tiles.forEach(function (_, k) { renderTile(k); });
+      setStatus('', 'info');
+    });
+
+    $('edClose').addEventListener('click', closeEditor);
+    $('edReplace').addEventListener('click', function () { if (active >= 0) chooseFor(active); });
+    $('edRemove').addEventListener('click', function () {
+      if (active < 0) return;
+      slots[active] = null; closeEditor(); refresh(true);
+    });
+    $('edRot').addEventListener('click', function () {
+      var s = slots[active]; if (!s) return;
+      s.rot = (s.rot + 1) % 4; syncEditor(); changed(true);
+    });
+    $('edFit').addEventListener('click', function () {
+      var s = slots[active]; if (!s) return;
+      s.t = CS.autoFit(s.image).transform; syncEditor(); changed(true);
+    });
+    $('edSize').addEventListener('input', function (e) { var s = slots[active]; if (!s) return; s.t.size = +e.target.value; syncEditor(); changed(false); });
+    $('edSize').addEventListener('change', function () { changed(true); });
+    $('edAngle').addEventListener('input', function (e) { var s = slots[active]; if (!s) return; s.t.angle = +e.target.value; syncEditor(); changed(false); });
+    $('edAngle').addEventListener('change', function () { changed(true); });
+
+    var wrap = $('edWrap');
+    wrap.addEventListener('pointerdown', function (e) {
+      if (!slots[active]) return;
+      drag = pointerImg(e);
+      try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* not critical */ }
+    });
+    wrap.addEventListener('pointermove', function (e) {
+      var s = slots[active];
+      if (!drag || !s) return;
+      var p = pointerImg(e);
+      s.t.cx += p[0] - drag[0]; s.t.cy += p[1] - drag[1];
+      drag = p;
+      syncEditor(); changed(false);
+    });
+    function endDrag() { if (drag) { drag = null; changed(true); } }
+    wrap.addEventListener('pointerup', endDrag);
+    wrap.addEventListener('pointercancel', endDrag);
+    window.addEventListener('resize', function () { if (active >= 0) syncEditor(); });
+  }
+
+  function setStatusAppend(text) {
+    var el = $('scanStatus');
+    if (el.lastChild) el.lastChild.textContent += ' ' + text; else setStatus(text, 'info');
+  }
+
+  init();
+  // for tests
+  window.__scan = { get slots() { return slots; }, get reading() { return reading; } };
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var L = CubeLogic;
+  var COLOR = { U: 'var(--c-U)', R: 'var(--c-R)', F: 'var(--c-F)', D: 'var(--c-D)', L: 'var(--c-L)', B: 'var(--c-B)' };
+  var NAMES = { U: 'white', R: 'red', F: 'green', D: 'yellow', L: 'orange', B: 'blue' };
+  var EXAMPLE = "F R U' L2 D B' R2 U F2 D' L";
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var stage = $('stage'), scene = $('scene'), cubeEl = $('cube');
+
+  // ---- application state ----
+  var state = L.SOLVED;       // 54 stickers currently shown
+  var startState = state;     // the cube the current solution starts from
+  var moves = [];             // solution as {face, power}
+  var idx = 0;                // how many solution moves are applied
+  var playing = false;
+  var busy = false;           // a turn animation is running
+  var solving = false;
+  var speed = 1;
+  var paintLetter = 'U';
+  var flagged = [];
+  var maybe = [];             // stickers the photo scan was unsure about
+  var pendingScan = null;     // a scanned cube waiting for the page to be idle
+  var S = 60;                 // cubie edge in px
+  var rx = -28, ry = -38;     // view angles
+
+  // ---- 3D cube ----
+  var faces = L.renderFaces().map(function (f) {
+    var el = document.createElement('div');
+    el.className = 'f';
+    el.dataset.s = f.idx >= 0 ? '1' : '0';
+    cubeEl.appendChild(el);
+    f.el = el;
+    return f;
+  });
+
+  function norm(v) { var l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+  function r5(x) { return Math.round(x * 100000) / 100000; }
+
+  function render(anim) {
+    var ax = anim ? L.AXES[anim.face] : null;
+    for (var i = 0; i < faces.length; i++) {
+      var f = faces[i], p = f.c, n = f.n;
+      if (ax && L.dot(p, ax) === 1) { p = L.rotate(p, ax, anim.phi); n = L.rotate(n, ax, anim.phi); }
+      // world (x right, y up, z toward viewer) -> CSS (x right, y down, z toward viewer)
+      var tx = (p[0] + 0.5 * n[0]) * S, ty = -(p[1] + 0.5 * n[1]) * S, tz = (p[2] + 0.5 * n[2]) * S;
+      var nn = [n[0], -n[1], n[2]];
+      var ref = Math.abs(nn[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+      var u = norm(L.cross(ref, nn));
+      var v = L.cross(nn, u);
+      f.el.style.transform = 'matrix3d(' + [
+        r5(u[0]), r5(u[1]), r5(u[2]), 0,
+        r5(v[0]), r5(v[1]), r5(v[2]), 0,
+        r5(nn[0]), r5(nn[1]), r5(nn[2]), 0,
+        r5(tx), r5(ty), r5(tz), 1
+      ].join(',') + ')';
+    }
+  }
+
+  function applyView() { cubeEl.style.transform = 'rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)'; }
+
+  function paintCube() {
+    for (var i = 0; i < faces.length; i++) {
+      var f = faces[i];
+      if (f.idx >= 0) f.el.style.setProperty('--c', COLOR[state[f.idx]]);
+    }
+  }
+
+  function layout() {
+    var r = stage.getBoundingClientRect();
+    S = Math.max(30, Math.min(r.width, r.height) / 5.4);
+    stage.style.perspective = Math.round(S * 15) + 'px';
+    for (var i = 0; i < faces.length; i++) {
+      var st = faces[i].el.style;
+      st.width = st.height = S + 'px';
+      st.margin = (-S / 2) + 'px 0 0 ' + (-S / 2) + 'px';
+    }
+    render(null);
+  }
+
+  var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+
+  /** Animate one turn, then commit it to the cube state. */
+  function animateMove(m, durationMs) {
+    return new Promise(function (resolve) {
+      var angle = m.power === 1 ? Math.PI / 2 : m.power === 2 ? Math.PI : -Math.PI / 2;
+      var dur = reduceMotion ? 120 : durationMs;
+      var t0 = performance.now();
+      function done() {
+        state = L.applyMove(state, m.face, m.power);
+        paintCube(); render(null); paintNet();
+        resolve();
+      }
+      function frame(now) {
+        var t = Math.min(1, (now - t0) / dur);
+        // a clockwise turn seen from outside is a negative right-hand rotation about the outward axis
+        render({ face: m.face, phi: -angle * ease(t) });
+        if (t < 1) requestAnimationFrame(frame); else done();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function turnMs(m) { return (m.power === 2 ? 1.35 : 1) * 520 / speed; }
+
+  // ---- drag to rotate ----
+  var drag = null;
+  stage.addEventListener('pointerdown', function (e) {
+    drag = { x: e.clientX, y: e.clientY };
+    try { stage.setPointerCapture(e.pointerId); } catch (err) { /* not critical */ }
+    stage.classList.add('dragging');
+  });
+  stage.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    ry += (e.clientX - drag.x) * 0.5;
+    rx = Math.max(-88, Math.min(88, rx - (e.clientY - drag.y) * 0.5));
+    drag.x = e.clientX; drag.y = e.clientY;
+    applyView();
+  });
+  function endDrag() { drag = null; stage.classList.remove('dragging'); }
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+
+  // ---- sticker net + palette ----
+  var netEl = $('net'), stickerEls = new Array(54);
+  ['U', 'L', 'F', 'R', 'B', 'D'].forEach(function (letter) {
+    var fi = L.LETTERS.indexOf(letter);
+    var wrap = document.createElement('div');
+    wrap.className = 'face'; wrap.dataset.f = letter;
+    for (var i = 0; i < 9; i++) {
+      var b = document.createElement('button');
+      var index = fi * 9 + i;
+      b.type = 'button'; b.className = 'st' + (i === 4 ? ' center' : '');
+      b.dataset.i = index;
+      if (i === 4) { b.textContent = letter; b.tabIndex = -1; }
+      stickerEls[index] = b;
+      wrap.appendChild(b);
+    }
+    netEl.appendChild(wrap);
+  });
+  netEl.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.st') : null;
+    if (!b || b.classList.contains('center') || busy || solving) return;
+    var i = +b.dataset.i;
+    if (state[i] === paintLetter) return;
+    state = state.slice(0, i) + paintLetter + state.slice(i + 1);
+    maybe = maybe.filter(function (k) { return k !== i; });
+    clearSolution();
+    paintCube(); paintNet(); refreshValidity();
+  });
+
+  var paletteEl = $('palette');
+  L.LETTERS.split('').forEach(function (letter) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'sw'; b.textContent = letter;
+    b.style.setProperty('--c', COLOR[letter]);
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-label', NAMES[letter]);
+    b.setAttribute('aria-checked', letter === paintLetter ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      paintLetter = letter;
+      Array.prototype.forEach.call(paletteEl.children, function (c) {
+        c.setAttribute('aria-checked', c === b ? 'true' : 'false');
+      });
+    });
+    paletteEl.appendChild(b);
+  });
+
+  function paintNet() {
+    for (var i = 0; i < 54; i++) {
+      var b = stickerEls[i];
+      b.style.setProperty('--c', COLOR[state[i]]);
+      b.classList.toggle('flag', flagged.indexOf(i) >= 0);
+      b.classList.toggle('maybe', maybe.indexOf(i) >= 0);
+      if (i % 9 !== 4) b.setAttribute('aria-label', 'Sticker ' + (i + 1) + ': ' + NAMES[state[i]] + (maybe.indexOf(i) >= 0 ? ' (the scan was unsure)' : ''));
+    }
+    $('maybeNote').hidden = maybe.length === 0;
+  }
+
+  function refreshValidity() {
+    var v = CubeSolver.parseFacelets(state);
+    var el = $('validity');
+    flagged = v.ok ? [] : (v.facelets || []).slice();
+    if (!v.ok && !flagged.length) {
+      // Wrong color counts carry no sticker list: flag the stickers of any color that appears too often.
+      var counts = {};
+      for (var k = 0; k < 54; k++) counts[state[k]] = (counts[state[k]] || 0) + 1;
+      for (var j = 0; j < 54; j++) if (j % 9 !== 4 && counts[state[j]] > 9) flagged.push(j);
+    }
+    el.classList.toggle('bad', !v.ok);
+    el.lastElementChild.textContent = v.ok
+      ? (L.isSolved(state) ? 'This cube is already solved.' : 'This is a possible cube, so it can be solved.')
+      : v.message;
+    paintNet();
+    return v;
+  }
+
+  // ---- solution + playback ----
+  var chipsEl = $('chips');
+
+  function clearSolution() {
+    playing = false; moves = []; idx = 0; startState = state;
+    chipsEl.innerHTML = '';
+    setStatus('', false);
+    updateTransport();
+  }
+
+  function setStatus(text, bad, spinner) {
+    var el = $('solveStatus');
+    el.className = 'status' + (bad ? ' bad' : '');
+    el.innerHTML = '';
+    if (spinner) { var s = document.createElement('span'); s.className = 'spin'; el.appendChild(s); }
+    var t = document.createElement('span'); t.textContent = text; el.appendChild(t);
+  }
+
+  function buildChips() {
+    chipsEl.innerHTML = '';
+    moves.forEach(function (m, i) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = L.moveName(m); b.dataset.i = i;
+      b.setAttribute('aria-label', 'Go to after move ' + (i + 1) + ', ' + L.moveName(m));
+      li.appendChild(b); chipsEl.appendChild(li);
+    });
+  }
+  chipsEl.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.chip') : null;
+    if (!b || busy) return;
+    gotoStep(+b.dataset.i + 1);
+  });
+
+  function updateTransport() {
+    var has = moves.length > 0;
+    $('btnRestart').disabled = !has || busy || idx === 0;
+    $('btnBack').disabled = !has || busy || idx === 0;
+    $('btnNext').disabled = !has || busy || idx >= moves.length;
+    $('btnPlay').disabled = !has;
+    var label = playing ? 'Pause' : (has && idx >= moves.length ? 'Replay' : 'Play');
+    $('btnPlay').title = label; $('btnPlay').setAttribute('aria-label', label);
+    $('playIcon').innerHTML = playing ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+    var chips = chipsEl.querySelectorAll('.chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('done', i < idx);
+      chips[i].classList.toggle('current', i === idx - 1);
+      chips[i].disabled = busy;
+    }
+    $('progress').textContent = has
+      ? (idx >= moves.length ? 'Solved after ' + moves.length + ' moves' : 'Move ' + idx + ' of ' + moves.length + (idx < moves.length ? ' · next ' + L.moveName(moves[idx]) : ''))
+      : '';
+    $('moveLabel').textContent = idx > 0 && has ? L.moveName(moves[idx - 1]) : '';
+    $('btnScramble').disabled = busy || solving;
+    $('btnReset').disabled = busy || solving;
+    $('btnSolve').disabled = busy || solving;
+  }
+
+  function gotoStep(k) {
+    playing = false;
+    state = L.applyMoves(startState, moves.slice(0, k));
+    idx = k;
+    paintCube(); render(null); paintNet(); updateTransport();
+  }
+
+  function stepForward() {
+    if (busy || idx >= moves.length) return Promise.resolve();
+    busy = true; updateTransport();
+    var m = moves[idx];
+    return animateMove(m, turnMs(m)).then(function () { idx++; busy = false; updateTransport(); });
+  }
+  function stepBack() {
+    if (busy || idx <= 0) return Promise.resolve();
+    busy = true; updateTransport();
+    var m = L.invertMove(moves[idx - 1]);
+    return animateMove(m, turnMs(m)).then(function () { idx--; busy = false; updateTransport(); });
+  }
+  function play() {
+    if (playing || busy || !moves.length) return;
+    if (idx >= moves.length) gotoStep(0);
+    playing = true; updateTransport();
+    (function loop() {
+      if (!playing || idx >= moves.length) { playing = false; updateTransport(); return; }
+      stepForward().then(loop);
+    })();
+  }
+  function pause() { playing = false; updateTransport(); }
+
+  $('btnPlay').addEventListener('click', function () { playing ? pause() : play(); });
+  $('btnNext').addEventListener('click', function () { pause(); stepForward(); });
+  $('btnBack').addEventListener('click', function () { pause(); stepBack(); });
+  $('btnRestart').addEventListener('click', function () { if (!busy) gotoStep(0); });
+  $('speed').addEventListener('input', function (e) {
+    speed = +e.target.value; $('speedOut').textContent = speed.toFixed(1) + '×';
+  });
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+    if (e.key === ' ') { e.preventDefault(); playing ? pause() : play(); }
+    else if (e.key === 'ArrowRight') { pause(); stepForward(); }
+    else if (e.key === 'ArrowLeft') { pause(); stepBack(); }
+  });
+
+  // ---- scramble / reset / custom moves ----
+  function runMoves(list, msEach) {
+    busy = true; updateTransport();
+    var chain = Promise.resolve();
+    list.forEach(function (m) { chain = chain.then(function () { return animateMove(m, msEach); }); });
+    return chain.then(function () { busy = false; });
+  }
+
+  $('btnScramble').addEventListener('click', function () {
+    if (busy || solving) return;
+    var list = L.scramble(20, Math.random);
+    clearSolution(); maybe = [];
+    $('scrambleLine').innerHTML = '<b>Scramble:</b> ' + list.map(L.moveName).join(' ');
+    $('algMsg').textContent = '';
+    runMoves(list, 85).then(function () { startState = state; refreshValidity(); updateTransport(); });
+  });
+  $('btnReset').addEventListener('click', function () {
+    if (busy || solving) return;
+    state = L.SOLVED; clearSolution(); maybe = [];
+    $('scrambleLine').textContent = '';
+    paintCube(); render(null); refreshValidity();
+  });
+  $('algForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy || solving) return;
+    var msg = $('algMsg'), list;
+    try { list = L.parseAlg($('algInput').value); } catch (err) { msg.className = 'msg bad'; msg.textContent = err.message; return; }
+    if (!list.length) { msg.className = 'msg bad'; msg.textContent = 'Type some moves first, like R U R’ U’.'; return; }
+    msg.className = 'msg'; msg.textContent = '';
+    clearSolution(); maybe = [];
+    $('scrambleLine').innerHTML = '<b>Applied:</b> ' + list.map(L.moveName).join(' ');
+    runMoves(list, 160).then(function () { startState = state; refreshValidity(); updateTransport(); });
+  });
+
+  // ---- solving (in a worker so the page stays responsive) ----
+  var worker = null, pending = null;
+  function getWorker() {
+    if (worker) return worker;
+    try {
+      var src = document.getElementById('solver-src').textContent;
+      var code = src + '\nself.onmessage=function(e){try{self.postMessage(CubeSolver.solveFacelets(e.data.facelets,e.data.opts))}catch(err){self.postMessage({ok:false,code:"INTERNAL",message:String(err&&err.message||err)})}};';
+      worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+      worker.onmessage = function (e) { var cb = pending; pending = null; if (cb) cb(e.data); };
+      worker.onerror = function () { worker = null; var cb = pending; pending = null; if (cb) solveOnMainThread(cb); };
+    } catch (err) { worker = null; }
+    return worker;
+  }
+  var lastRequest = null;
+  function solveOnMainThread(cb) {
+    setTimeout(function () { cb(CubeSolver.solveFacelets(lastRequest)); }, 30);
+  }
+  function requestSolve(facelets, cb) {
+    lastRequest = facelets;
+    var w = getWorker();
+    if (!w) { solveOnMainThread(cb); return; }
+    pending = cb;
+    w.postMessage({ facelets: facelets, opts: {} });
+  }
+
+  function solve() {
+    if (busy || solving) return;
+    var v = refreshValidity();
+    if (!v.ok) { setStatus((flagged.length ? 'Fix the highlighted stickers first. ' : 'Fix the cube first. ') + v.message, true); return; }
+    if (L.isSolved(state)) { clearSolution(); setStatus('The cube is already solved. Scramble it to see a solution.', false); return; }
+    solving = true; clearSolution(); updateTransport();
+    setStatus('Solving…', false, true);
+    var snapshot = state;
+    requestSolve(snapshot, function (r) {
+      solving = false;
+      if (!r || !r.ok) { setStatus((r && r.message) || 'The solver could not finish.', true); updateTransport(); return; }
+      startState = snapshot;
+      moves = L.parseAlg(r.solution);
+      idx = 0;
+      buildChips();
+      setStatus('Found a ' + r.length + '-move solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
+      updateTransport();
+    });
+  }
+  $('btnSolve').addEventListener('click', solve);
+
+  // ---- boot: an example scramble that is already solved for, so the page opens in a working state ----
+  window.addEventListener('resize', layout);
+  if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
+  applyView();
+  layout();
+  state = L.applyAlg(L.SOLVED, EXAMPLE);
+  startState = state;
+  $('scrambleLine').innerHTML = '<b>Example scramble:</b> ' + EXAMPLE;
+  paintCube(); paintNet(); refreshValidity(); updateTransport();
+  solve();
+
+  // ---- hooks for the photo scanner (web/scan-ui.js) ----
+  function flushPending() {
+    if (!pendingScan || busy || solving) return;
+    var p = pendingScan;
+    pendingScan = null;
+    state = p.facelets;
+    maybe = p.uncertain.slice();
+    clearSolution();
+    $('scrambleLine').innerHTML = '<b>From your photos</b>';
+    paintCube(); render(null); refreshValidity(); updateTransport();
+    if (p.solve) solve();
+  }
+  setInterval(flushPending, 250);
+  window.CubeApp = {
+    /** Show a scanned cube (54 URFDLB letters) and optionally solve it once the page is idle. */
+    loadScanned: function (facelets, uncertain, doSolve) {
+      pendingScan = { facelets: facelets, uncertain: uncertain || [], solve: !!doSolve };
+      flushPending();
+    }
+  };
+
+  // exposed for testing in a browser console
+  window.__cube ={ get state() { return state; }, get moves() { return moves; }, get idx() { return idx; } };
+})();
+</script>
