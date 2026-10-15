@@ -7,9 +7,15 @@ A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScr
 
 This is step one of a larger Rubik's Cube site (photo scanning, 3D animation and a WCA leaderboard are not built yet). The code lives in `src/lib/cube/` so it can be dropped into a Next.js app unchanged.
 
-## Setup
+## Just want to use it?
 
-Requires Node 20+ (tested on Node 22).
+Open the live page: https://untitledgoosegamedev.github.io/Rubiks-Solver/
+
+No install needed. Upload six photos of your cube (or paint the colors by hand) and it solves it in your browser. Nothing is uploaded anywhere. You can also download this repo and open `web/index.html` directly.
+
+## For developers: setup
+
+Node is only needed to run the tests, use the command-line solver, or rebuild the page after changing the code. Requires Node 20+ (tested on Node 22).
 
 ```bash
 npm install
@@ -84,7 +90,7 @@ npm install            # installs esbuild, used only to bundle the solver
 npm run build:web      # writes web/index.html
 ```
 
-Open `web/index.html` in a browser. `web/cubelogic.js` (sticker geometry and move logic used by the page) is covered by `tests/web.test.ts`, which checks it against the solver's independent cube model. The page itself was exercised once in headless Chromium: solve in the worker, play back to a solved cube, validation highlighting, and no horizontal overflow at phone width.
+Open `web/index.html` in a browser. The built copy is also in `docs/index.html`, which GitHub Pages serves; after rebuilding, copy `web/index.html` over it. `web/cubelogic.js` (sticker geometry and move logic used by the page) is covered by `tests/web.test.ts`, which checks it against the solver's independent cube model. The page itself was exercised once in headless Chromium: solve in the worker, play back to a solved cube, validation highlighting, and no horizontal overflow at phone width.
 
 ## Photo scanning
 
