@@ -223,7 +223,8 @@
   .slot.active .thumb { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(147,166,255,0.35); }
   .slot .thumb canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
   .slot .plus { font: 600 28px/1 var(--display); color: var(--dim); }
-  .slot .name { font-weight: 600; font-size: 14px; }
+  .slot .name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .slot .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,0.35); }
   .slot .sub { color: var(--dim); font-size: 12px; line-height: 1.3; }
   .scan-actions { margin-top: 14px; }
   .editor { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
@@ -275,7 +276,7 @@
     <aside class="panel">
       <section class="block" aria-labelledby="h-scan" id="scanBlock">
         <h2 id="h-scan">Scan from photos</h2>
-        <p class="scan-help">Hold the cube with any face up and one face toward you. Take six straight-on photos that fill the frame: Front, then turn the cube to show Right, Back and Left. Tilt it to show Up, then Down. Even light with no glare reads best.</p>
+        <p class="scan-help">Each photo is named by the color of the face's <strong>center sticker</strong> (the middle one, which never moves). Start with white on top and green facing you. Photograph the green face, then turn the cube so red, blue and orange face you in turn, keeping white on top. Then tilt it to photograph white (the top) and yellow (the bottom). Fill the frame, straight on, in even light with no glare.</p>
         <div class="slots" id="slots"></div>
         <div class="row scan-actions">
           <button class="btn" type="button" id="btnPickSix">Add several photos</button>
@@ -283,7 +284,7 @@
         </div>
         <p class="status scan-status" id="scanStatus" role="status"></p>
         <div class="editor" id="editor" hidden>
-          <div class="editor-head"><strong id="edTitle">Front photo</strong><button class="btn" type="button" id="edClose">Done</button></div>
+          <div class="editor-head"><strong id="edTitle">Green center photo</strong><button class="btn" type="button" id="edClose">Done</button></div>
           <div class="ed-wrap" id="edWrap"><canvas id="edCanvas" aria-label="Photo with the sticker grid. Drag to move the grid."></canvas></div>
           <div class="ed-controls">
             <label for="edSize">Size <input type="range" id="edSize" min="10" max="100" step="0.5" value="50"></label>
@@ -518,13 +519,18 @@ const CubeLogic = (() => {
   var $ = function (id) { return document.getElementById(id); };
 
   // Capture order, with which cube face each photo shows and how it should be held.
+  // Tiles are named by the center sticker of the face in the photo, assuming the standard
+  // color scheme (white opposite yellow, green opposite blue, red opposite orange) with
+  // white on top and green facing you. `face` is the solver's face index (U R F D L B).
+  // The swatch colors are fixed on purpose: the page recolors the cube to match what was
+  // scanned, but the tile labels must keep meaning the same thing.
   var SLOTS = [
-    { name: 'Front', face: 2, sub: 'Up face at the top' },
-    { name: 'Right', face: 1, sub: 'Up face at the top' },
-    { name: 'Back', face: 5, sub: 'Up face at the top' },
-    { name: 'Left', face: 4, sub: 'Up face at the top' },
-    { name: 'Up', face: 0, sub: 'Front face at the bottom' },
-    { name: 'Down', face: 3, sub: 'Front face at the top' }
+    { name: 'Green center', color: '#17b45b', face: 2, sub: 'Facing you · white on top' },
+    { name: 'Red center', color: '#e5232f', face: 1, sub: 'Red faces you · white on top' },
+    { name: 'Blue center', color: '#2b6df5', face: 5, sub: 'Blue faces you · white on top' },
+    { name: 'Orange center', color: '#ff7d1a', face: 4, sub: 'Orange faces you · white on top' },
+    { name: 'White center', color: '#f3f5f8', face: 0, sub: 'Top of the cube · green at the bottom of the photo' },
+    { name: 'Yellow center', color: '#ffd60a', face: 3, sub: 'Bottom of the cube · green at the top of the photo' }
   ];
   var LETTERS = 'URFDLB';
   var NOMINAL = {
@@ -616,7 +622,10 @@ const CubeLogic = (() => {
       b.type = 'button'; b.className = 'slot'; b.dataset.i = i;
       b.innerHTML = '<span class="thumb"><span class="plus">+</span></span>' +
         '<span class="name"></span><span class="sub"></span>';
+      var dot = document.createElement('i');
+      dot.className = 'dot'; dot.style.background = def.color; dot.setAttribute('aria-hidden', 'true');
       b.querySelector('.name').textContent = def.name;
+      b.querySelector('.name').prepend(dot);
       b.querySelector('.sub').textContent = def.sub;
       b.addEventListener('click', function () {
         if (slots[i]) openEditor(i); else chooseFor(i);
@@ -770,7 +779,7 @@ const CubeLogic = (() => {
       if (reading.similarCenters.length) {
         var pair = reading.similarCenters[0];
         var names = SLOTS.filter(function (d) { return d.face === pair[0] || d.face === pair[1]; }).map(function (d) { return d.name; });
-        msg = 'The ' + names.join(' and ') + ' photos show the same center color. Check that each photo is in the right slot.';
+        msg = 'The ' + names.join(' and ') + ' photos show the same center color. Check that each photo is in the right slot, with that face’s center in the middle.';
         setStatus(msg, 'bad');
       } else if (!valid) {
         setStatus('Read all six photos, but the colors don’t make a possible cube. Adjust a photo’s grid, or fix the highlighted stickers below.', 'bad');

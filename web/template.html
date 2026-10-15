@@ -223,7 +223,8 @@
   .slot.active .thumb { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(147,166,255,0.35); }
   .slot .thumb canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
   .slot .plus { font: 600 28px/1 var(--display); color: var(--dim); }
-  .slot .name { font-weight: 600; font-size: 14px; }
+  .slot .name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .slot .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,0.35); }
   .slot .sub { color: var(--dim); font-size: 12px; line-height: 1.3; }
   .scan-actions { margin-top: 14px; }
   .editor { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
@@ -275,7 +276,7 @@
     <aside class="panel">
       <section class="block" aria-labelledby="h-scan" id="scanBlock">
         <h2 id="h-scan">Scan from photos</h2>
-        <p class="scan-help">Hold the cube with any face up and one face toward you. Take six straight-on photos that fill the frame: Front, then turn the cube to show Right, Back and Left. Tilt it to show Up, then Down. Even light with no glare reads best.</p>
+        <p class="scan-help">Each photo is named by the color of the face's <strong>center sticker</strong> (the middle one, which never moves). Start with white on top and green facing you. Photograph the green face, then turn the cube so red, blue and orange face you in turn, keeping white on top. Then tilt it to photograph white (the top) and yellow (the bottom). Fill the frame, straight on, in even light with no glare.</p>
         <div class="slots" id="slots"></div>
         <div class="row scan-actions">
           <button class="btn" type="button" id="btnPickSix">Add several photos</button>
@@ -283,7 +284,7 @@
         </div>
         <p class="status scan-status" id="scanStatus" role="status"></p>
         <div class="editor" id="editor" hidden>
-          <div class="editor-head"><strong id="edTitle">Front photo</strong><button class="btn" type="button" id="edClose">Done</button></div>
+          <div class="editor-head"><strong id="edTitle">Green center photo</strong><button class="btn" type="button" id="edClose">Done</button></div>
           <div class="ed-wrap" id="edWrap"><canvas id="edCanvas" aria-label="Photo with the sticker grid. Drag to move the grid."></canvas></div>
           <div class="ed-controls">
             <label for="edSize">Size <input type="range" id="edSize" min="10" max="100" step="0.5" value="50"></label>

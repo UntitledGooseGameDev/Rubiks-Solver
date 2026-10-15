@@ -9,13 +9,18 @@
   var $ = function (id) { return document.getElementById(id); };
 
   // Capture order, with which cube face each photo shows and how it should be held.
+  // Tiles are named by the center sticker of the face in the photo, assuming the standard
+  // color scheme (white opposite yellow, green opposite blue, red opposite orange) with
+  // white on top and green facing you. `face` is the solver's face index (U R F D L B).
+  // The swatch colors are fixed on purpose: the page recolors the cube to match what was
+  // scanned, but the tile labels must keep meaning the same thing.
   var SLOTS = [
-    { name: 'Front', face: 2, sub: 'Up face at the top' },
-    { name: 'Right', face: 1, sub: 'Up face at the top' },
-    { name: 'Back', face: 5, sub: 'Up face at the top' },
-    { name: 'Left', face: 4, sub: 'Up face at the top' },
-    { name: 'Up', face: 0, sub: 'Front face at the bottom' },
-    { name: 'Down', face: 3, sub: 'Front face at the top' }
+    { name: 'Green center', color: '#17b45b', face: 2, sub: 'Facing you · white on top' },
+    { name: 'Red center', color: '#e5232f', face: 1, sub: 'Red faces you · white on top' },
+    { name: 'Blue center', color: '#2b6df5', face: 5, sub: 'Blue faces you · white on top' },
+    { name: 'Orange center', color: '#ff7d1a', face: 4, sub: 'Orange faces you · white on top' },
+    { name: 'White center', color: '#f3f5f8', face: 0, sub: 'Top of the cube · green at the bottom of the photo' },
+    { name: 'Yellow center', color: '#ffd60a', face: 3, sub: 'Bottom of the cube · green at the top of the photo' }
   ];
   var LETTERS = 'URFDLB';
   var NOMINAL = {
@@ -107,7 +112,10 @@
       b.type = 'button'; b.className = 'slot'; b.dataset.i = i;
       b.innerHTML = '<span class="thumb"><span class="plus">+</span></span>' +
         '<span class="name"></span><span class="sub"></span>';
+      var dot = document.createElement('i');
+      dot.className = 'dot'; dot.style.background = def.color; dot.setAttribute('aria-hidden', 'true');
       b.querySelector('.name').textContent = def.name;
+      b.querySelector('.name').prepend(dot);
       b.querySelector('.sub').textContent = def.sub;
       b.addEventListener('click', function () {
         if (slots[i]) openEditor(i); else chooseFor(i);
@@ -261,7 +269,7 @@
       if (reading.similarCenters.length) {
         var pair = reading.similarCenters[0];
         var names = SLOTS.filter(function (d) { return d.face === pair[0] || d.face === pair[1]; }).map(function (d) { return d.name; });
-        msg = 'The ' + names.join(' and ') + ' photos show the same center color. Check that each photo is in the right slot.';
+        msg = 'The ' + names.join(' and ') + ' photos show the same center color. Check that each photo is in the right slot, with that face’s center in the middle.';
         setStatus(msg, 'bad');
       } else if (!valid) {
         setStatus('Read all six photos, but the colors don’t make a possible cube. Adjust a photo’s grid, or fix the highlighted stickers below.', 'bad');
