@@ -2373,7 +2373,7 @@ const LiveComps = (function () {
       moves = L.parseAlg((r.actualMoves || r.moves).join(' '));
       idx = 0;
       buildPlan();
-      setStatus('Found ' + (/^(8|11|18)$/.test(String(r.length)) ? 'an ' : 'a ') + r.length + '-move ' + METHOD_INFO[used].label + ' solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
+      setStatus('Found ' + (/^(8|11|18|8\d)$/.test(String(r.length)) ? 'an ' : 'a ') + r.length + '-move ' + METHOD_INFO[used].label + ' solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
       updateTransport();
     });
   }
