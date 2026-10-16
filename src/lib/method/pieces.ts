@@ -53,13 +53,13 @@ function nextOf(kind: 'c' | 'e'): Uint8Array {
 const homeState = (kind: 'c' | 'e', piece: number) => (kind === 'c' ? piece * 3 : piece * 2);
 
 /** Distance (in moves from `moves`) of one piece from home, for all 24 states. 255 = unreachable. */
-function singleTable(kind: 'c' | 'e', piece: number, moves: number[]): Uint8Array {
-  const key = `s${kind}${piece}:${moves.join(',')}`;
+function singleTable(kind: 'c' | 'e', piece: number, moves: number[], target?: number): Uint8Array {
+  const key = `s${kind}${piece}:${target ?? 'h'}:${moves.join(',')}`;
   let t = tableCache.get(key);
   if (t) return t;
   t = new Uint8Array(24).fill(255);
   const next = nextOf(kind);
-  const start = homeState(kind, piece);
+  const start = target ?? homeState(kind, piece);
   t[start] = 0;
   let frontier = [start];
   for (let d = 1; frontier.length; d++) {
@@ -75,13 +75,13 @@ function singleTable(kind: 'c' | 'e', piece: number, moves: number[]): Uint8Arra
 }
 
 /** Distance for two pieces solved together: index = stateA * 24 + stateB. */
-function pairTable(ka: 'c' | 'e', pa: number, kb: 'c' | 'e', pb: number, moves: number[]): Uint8Array {
-  const key = `p${ka}${pa}${kb}${pb}:${moves.join(',')}`;
+function pairTable(ka: 'c' | 'e', pa: number, kb: 'c' | 'e', pb: number, moves: number[], ta?: number, tb?: number): Uint8Array {
+  const key = `p${ka}${pa}${kb}${pb}:${ta ?? 'h'}:${tb ?? 'h'}:${moves.join(',')}`;
   let t = tableCache.get(key);
   if (t) return t;
   t = new Uint8Array(576).fill(255);
   const na = nextOf(ka), nb = nextOf(kb);
-  const start = homeState(ka, pa) * 24 + homeState(kb, pb);
+  const start = (ta ?? homeState(ka, pa)) * 24 + (tb ?? homeState(kb, pb));
   t[start] = 0;
   let frontier = [start];
   for (let d = 1; frontier.length; d++) {
@@ -110,6 +110,8 @@ export interface Tracked {
    * Every piece also gets a single-piece table automatically.
    */
   pairs: [number, number][];
+  /** Optional goal states (slot*3+twist or slot*2+flip) for [...corners, ...edges]; default is home. */
+  targets?: number[];
 }
 
 export interface SearchLimits {
@@ -133,8 +135,8 @@ export function trackedSearch(
   tr.corners.forEach((p, i) => { kinds.push('c'); pieces.push(p); st0[i] = cornerState(cube, p); });
   tr.edges.forEach((p, i) => { kinds.push('e'); pieces.push(p); st0[nC + i] = edgeState(cube, p); });
 
-  const singles = pieces.map((p, i) => singleTable(kinds[i], p, moves));
-  const pairTabs = tr.pairs.map(([a, b]) => pairTable(kinds[a], pieces[a], kinds[b], pieces[b], moves));
+  const singles = pieces.map((p, i) => singleTable(kinds[i], p, moves, tr.targets?.[i]));
+  const pairTabs = tr.pairs.map(([a, b]) => pairTable(kinds[a], pieces[a], kinds[b], pieces[b], moves, tr.targets?.[a], tr.targets?.[b]));
   const nextArr = kinds.map((k) => nextOf(k));
 
   const heur = (st: Uint8Array): number => {

@@ -41,20 +41,20 @@ export function turnAround(moves: string, k: number): string {
 const RIGHT_INSERT = "U R U' R' U' F' U F";
 const LEFT_INSERT = "U' L' U L U F U' F'";
 
-/** Middle-layer insertions: the right-hand and left-hand algorithms, in all four rotations. */
+/** Middle-layer insertions: Righty and Lefty (the long versions), in all four rotations. */
 export const MIDDLE_INSERTS: Alg[] = [];
 for (let k = 0; k < 4; k++) {
-  MIDDLE_INSERTS.push(A(`right-hand-${k}`, 'Right-hand algorithm', turnAround(RIGHT_INSERT, k)));
-  MIDDLE_INSERTS.push(A(`left-hand-${k}`, 'Left-hand algorithm', turnAround(LEFT_INSERT, k)));
+  MIDDLE_INSERTS.push(A(`righty-edge-${k}`, 'Righty', turnAround(RIGHT_INSERT, k)));
+  MIDDLE_INSERTS.push(A(`lefty-edge-${k}`, 'Lefty', turnAround(LEFT_INSERT, k)));
 }
 
 export const TOP_CROSS_ALGS: Alg[] = [
-  A('cross-line', 'Top cross algorithm', "F R U R' U' F'"),
-  A('cross-mirror', 'Top cross algorithm (mirror)', "F U R U' R' F'"),
+  A('cross-line', 'Top cross (F, Righty, F’)', "F R U R' U' F'"),
+  A('cross-mirror', 'Top cross (F, backwards Righty, F’)', "F U R U' R' F'"),
 ];
 export const SUNE_EDGES: Alg = A('sune-u', 'Sune + U', "R U R' U R U2 R' U");
 export const NIKLAS: Alg = A('niklas', 'Niklas', "U R U' L' U R' U' L");
-export const TWIST_CORNER: Alg = A('twist', 'Corner twist', "R' D' R D");
+export const TWIST_CORNER: Alg = A('twist', 'Righty (twist)', "R' D' R D");
 
 // ---------------------------------------------------------------- CFOP
 export const OLL_EDGE_ALGS: Alg[] = [

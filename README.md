@@ -5,7 +5,7 @@
 
 A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript. It takes the 54 sticker colors of a cube, validates that the cube is physically possible, and returns a move sequence that solves it, typically 19–23 moves.
 
-It comes with a browser page (v2.1) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The WCA leaderboard is not built yet. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
+It comes with a browser page (v2.2) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The WCA leaderboard is not built yet. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
 
 ## Just want to use it?
 
@@ -90,7 +90,7 @@ In the two human methods the first layer is built on the bottom and the last lay
 
 | Method | Steps | Typical length |
 | --- | --- | --- |
-| **Beginner** | Bottom cross (one edge at a time), bottom corners with **Righty** / **Lefty**, middle layer with the **right-hand / left-hand algorithms**, top cross (`F R U R' U' F'`), top edges with **Sune + U**, top corners with **Niklas**, corner twisting with `R' D' R D` | about 150 moves |
+| **Beginner** | Daisy, bottom cross (turn each petal down), bottom corners with **Righty** / **Lefty**, middle layer with the long **Righty** / **Lefty**, top cross (`F R U R' U' F'`, which is F, Righty, F'), top edges with **Sune + U**, top corners with **Niklas**, corner twisting with `R' D' R D` (Righty on the bottom) | about 150 moves |
 | **CFOP** | Optimal **Cross**, four **F2L** pairs (each found by search, so they have no names), two-look **OLL** (line / L-shape, then Sune, Antisune, H, Pi, U), all 21 **PLL** algorithms | about 60 moves |
 | **Fastest** | The two-phase solution, split into its two phases | about 20 moves |
 

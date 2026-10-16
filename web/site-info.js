@@ -3,9 +3,23 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.1',
+  version: '2.2',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.2',
+      date: '2026-10-15',
+      title: 'Daisy first, four algorithms',
+      sections: [
+        {
+          heading: 'Changed',
+          items: [
+            'Beginner now starts with the daisy (the four first-color edges around the opposite center), then turns each petal down to make the cross.',
+            'The middle-layer algorithms are now called Righty and Lefty, so Beginner uses just Righty, Lefty, Sune and Niklas. The top cross is shown as F, Righty, F’ and the corner twist as Righty on the bottom.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.1',
       date: '2026-10-15',

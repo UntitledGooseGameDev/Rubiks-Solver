@@ -160,6 +160,7 @@ test('Beginner method solves 150 random legal cubes, checked stage by stage on t
     total += r.length;
     const stages = replayByStage(f, r);
     for (const { stage, facelets } of stages) {
+      if (stage === 'daisy') assert.ok(same(facelets, [1, 3, 5, 7], 'D'), `#${n} daisy`);
       if (stage === 'cross') assert.ok(crossOK(facelets), `#${n} cross`);
       if (stage === 'corners') assert.ok(bottomOK(facelets), `#${n} bottom corners`);
       if (stage === 'middle') assert.ok(f2lOK(facelets), `#${n} middle layer`);

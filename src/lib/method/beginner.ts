@@ -2,17 +2,18 @@
  * Beginner (layer-by-layer) method. The first layer is built on the bottom (D)
  * and the last layer is on top (U), with the cube held as it appears on screen.
  *
- *   1 bottom cross     – each edge placed on its own (shortest moves)
- *   2 bottom corners   – Righty / Lefty triggers
- *   3 middle layer     – right-hand / left-hand algorithms
- *   4 top cross        – F R U R' U' F'
- *   5 top edges        – Sune + U
- *   6 top corners      – Niklas
- *   7 twist corners    – R' D' R D, repeated
+ *   1 daisy            – the four first-layer edges around the top center
+ *   2 bottom cross     – turn each petal down
+ *   3 bottom corners   – Righty / Lefty triggers
+ *   4 middle layer     – Righty / Lefty (long versions)
+ *   5 top cross        – F R U R' U' F'
+ *   6 top edges        – Sune + U
+ *   7 top corners      – Niklas
+ *   8 twist corners    – R' D' R D, repeated
  */
 import { Cubie, applyMoves, parseMoves } from '../cube/cubie';
 import {
-  ALL_MOVE_IDS, cornerHome, edgeHome, trackedSearch,
+  ALL_MOVE_IDS, cornerHome, edgeHome, edgeState, movesOfFaces, trackedSearch,
 } from './pieces';
 import { AUF_MACROS, Macro, macroSearch, makeMacro } from './macro';
 import {
@@ -21,9 +22,10 @@ import {
 import { Plan, PlanBuilder, Stage, cornerLabel, edgeLabel } from './plan';
 
 export const BEGINNER_STAGES: Stage[] = [
-  { key: 'cross', title: 'Bottom cross', blurb: 'Build a plus sign on the bottom ([D]) layer. Each edge must also match the center on its side.' },
-  { key: 'corners', title: 'Bottom corners', blurb: 'Finish the bottom layer by inserting the four [D] corners with the Righty and Lefty algorithms.' },
-  { key: 'middle', title: 'Middle layer', blurb: 'Insert the four middle-layer edges (the ones with no [U] sticker) with the right-hand and left-hand algorithms.' },
+  { key: 'daisy', title: 'Daisy', blurb: 'Put the four [D] edges around the [U] center on the top, with the [D] stickers facing up. It looks like a flower.' },
+  { key: 'cross', title: 'Bottom cross', blurb: 'Turn the top until a petal matches the center on its side, then turn that side half way round to drop the edge to the bottom. Do it for all four petals.' },
+  { key: 'corners', title: 'Bottom corners', blurb: 'Finish the bottom layer by inserting the four [D] corners with Righty and Lefty.' },
+  { key: 'middle', title: 'Middle layer', blurb: 'Insert the four middle-layer edges (the ones with no [U] sticker) with Righty and Lefty (the long versions).' },
   { key: 'topcross', title: 'Top cross', blurb: 'Make a plus sign of [U] stickers on the top face.' },
   { key: 'topedges', title: 'Top edges', blurb: 'Move the top edges so each one matches the center on its side.' },
   { key: 'topcorners', title: 'Top corners', blurb: 'Move the four top corners into their correct spots (they can still be twisted).' },
@@ -49,9 +51,38 @@ function fewest(options: (Macro[] | null)[]): { seq: Macro[]; index: number } | 
 export function solveBeginner(start: Cubie, opts: { check?: boolean } = {}): Plan {
   const pb = new PlanBuilder(start, BEGINNER_STAGES);
 
-  // ---------------------------------------------------------- 1. bottom cross
+  // ---------------------------------------------------------- 1. daisy
   {
-    const crossEdges = [4, 5, 6, 7]; // DR DF DL DB
+    const petals = [4, 5, 6, 7]; // the four [D] edges: DR DF DL DB
+    const isPetal = (c: Cubie, e: number) => edgeState(c, e) % 2 === 0 && edgeState(c, e) / 2 < 4;
+    // If the cross is already there, leave it alone.
+    const crossDone = () => petals.every((e) => edgeHome(pb.cube, e));
+    for (;;) {
+      if (crossDone()) break;
+      const placed = petals.filter((e) => isPetal(pb.cube, e));
+      const rest = petals.filter((e) => !placed.includes(e));
+      if (!rest.length) break;
+      const used = placed.map((e) => edgeState(pb.cube, e) / 2);
+      let best: { e: number; path: number[] } | null = null;
+      for (const e of rest) for (let slot = 0; slot < 4; slot++) {
+        if (used.includes(slot)) continue;
+        const edges = [...placed, e];
+        const targets = [...placed.map((p) => edgeState(pb.cube, p)), slot * 2];
+        const pairs: [number, number][] = [];
+        for (let i = 0; i < edges.length; i++) for (let j = i + 1; j < edges.length; j++) pairs.push([i, j]);
+        const path = trackedSearch(pb.cube, { corners: [], edges, pairs, targets }, ALL_MOVE_IDS, { maxDepth: 9, maxNodes: 3_000_000 });
+        if (path && (!best || path.length < best.path.length)) best = { e, path };
+      }
+      if (!best) throw new Error('Beginner solver: could not place a daisy petal');
+      pb.addIndices('daisy', `Add the ${edgeLabel(best.e)} petal`, 'free', best.path,
+        `Bring the ${edgeLabel(best.e)} edge to the top layer with its [D] sticker facing up. Keep the petals you already have.`);
+    }
+  }
+
+  // ---------------------------------------------------------- 2. bottom cross
+  {
+    const crossEdges = [4, 5, 6, 7];
+    const moves = [...movesOfFaces([0]), 4, 7, 13, 16]; // U turns and half turns of the sides
     for (;;) {
       const placed = crossEdges.filter((e) => edgeHome(pb.cube, e));
       const rest = crossEdges.filter((e) => !placed.includes(e));
@@ -61,16 +92,16 @@ export function solveBeginner(start: Cubie, opts: { check?: boolean } = {}): Pla
         const edges = [...placed, e];
         const pairs: [number, number][] = [];
         for (let i = 0; i < edges.length; i++) for (let j = i + 1; j < edges.length; j++) pairs.push([i, j]);
-        const path = trackedSearch(pb.cube, { corners: [], edges, pairs }, ALL_MOVE_IDS, { maxDepth: 10, maxNodes: 4_000_000 });
+        const path = trackedSearch(pb.cube, { corners: [], edges, pairs }, moves, { maxDepth: 12, maxNodes: 3_000_000 });
         if (path && (!best || path.length < best.path.length)) best = { e, path };
       }
-      if (!best) throw new Error('Beginner solver: could not place a cross edge');
-      pb.addIndices('cross', `Place the ${edgeLabel(best.e)} edge`, 'free', best.path,
-        `Bring the ${edgeLabel(best.e)} edge to the bottom, next to the matching center.`);
+      if (!best) throw new Error('Beginner solver: could not drop a petal to the cross');
+      pb.addIndices('cross', `Drop the ${edgeLabel(best.e)} petal down`, 'free', best.path,
+        `Turn the top until the ${edgeLabel(best.e)} petal matches the center on its side, then turn that side half way round.`);
     }
   }
 
-  // ---------------------------------------------------------- 2. bottom corners
+  // ---------------------------------------------------------- 3. bottom corners
   {
     const corners = [4, 5, 6, 7];
     const macros: Macro[] = [...AUF_MACROS];
