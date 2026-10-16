@@ -308,6 +308,30 @@
   .tok i { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; background: var(--c); margin-right: 0.3em; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); vertical-align: -0.02em; }
 
   /* ---------- text pages ---------- */
+  kbd { font: 600 0.85em/1 var(--mono); background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+  .tm-scramble { font: 600 clamp(1rem, 2.6vw, 1.35rem)/1.6 var(--mono); letter-spacing: 0.04em; background: var(--sunken); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 0 0 12px; word-spacing: 0.35em; }
+  .tm-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 0 0 12px; }
+  .tm-check { display: flex; gap: 8px; align-items: center; color: var(--dim); font-size: 14px; }
+  .tm-box { user-select: none; -webkit-user-select: none; touch-action: manipulation; cursor: pointer; text-align: center; padding: 34px 12px 26px; border-radius: 18px; border: 1px solid var(--line); background: var(--raised); }
+  .tm-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .tm-time { font: 700 clamp(3.6rem, 16vw, 7rem)/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .tm-hint { color: var(--dim); margin-top: 8px; font-size: 14px; min-height: 1.4em; }
+  .tm-box[data-s="holding"] .tm-time { color: #ef5b5b; }
+  .tm-box[data-s="ready"] .tm-time { color: #3fbf6f; }
+  .tm-box[data-s="inspect"] .tm-time { color: #e8b73a; }
+  .tm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 14px 0; }
+  .tm-stat { background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tm-stat b { display: block; font: 600 1.1rem/1.2 var(--mono); }
+  .tm-stat span { color: var(--dim); font-size: 12px; }
+  .tm-list-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .tm-list { list-style: decimal; margin: 4px 0 0; padding-left: 2.4em; max-height: 340px; overflow-y: auto; }
+  .tm-list li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .tm-list li > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tm-list .tt { font: 600 15px/1 var(--mono); min-width: 6.5em; }
+  .tm-list .sc { color: var(--dim); font: 12px/1.3 var(--mono); flex: 1 1 14em; word-break: break-word; }
+  .tm-list button { font: 600 12px/1 var(--body); color: var(--dim); background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
+  .tm-list button:hover { color: var(--fg); }
+  .tm-list button[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); }
   .doc.wide { max-width: 900px; }
   .lb-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 12px; }
   .lb-controls label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--dim); font-size: 14px; }
@@ -363,6 +387,7 @@
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
         <a href="#/" data-route="solver">Solver</a>
+        <a href="#/timer" data-route="timer">Timer</a>
         <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
         <a href="#/troubleshooting" data-route="troubleshooting">Troubleshooting</a>
         <a href="#/updates" data-route="updates">Update log</a>
@@ -474,6 +499,24 @@
         <p class="note" id="planNote"></p>
       </section>
     </aside>
+  </main>
+
+  <main class="doc wide" id="view-timer" hidden>
+    <h2>Timer</h2>
+    <p class="lede">A speedcubing timer. Hold <kbd>Space</kbd> until the time turns green, let go to start, and press any key to stop. On a phone, press and hold the big box, then lift your finger.</p>
+    <div class="tm-scramble" id="tmScramble" aria-live="polite"></div>
+    <div class="tm-actions">
+      <button class="btn" id="tmNext" type="button">New scramble</button>
+      <label class="tm-check"><input type="checkbox" id="tmInspect"> 15-second inspection</label>
+    </div>
+    <div class="tm-box" id="tmBox" role="button" tabindex="0" aria-label="Timer. Hold to get ready, release to start, press again to stop.">
+      <div class="tm-time" id="tmTime">0.00</div>
+      <div class="tm-hint" id="tmHint">Hold Space to get ready</div>
+    </div>
+    <div class="tm-stats" id="tmStats"></div>
+    <div class="tm-list-head"><h3>Solves</h3><button class="linkbtn" id="tmClear" type="button">Clear all</button></div>
+    <ol class="tm-list" id="tmList" reversed></ol>
+    <p class="note">Scrambles are random-move scrambles (20 turns), not the random-state scrambles used at official competitions. Your solves are saved only in this browser.</p>
   </main>
 
   <main class="doc wide" id="view-leaderboard" hidden>
@@ -1211,9 +1254,24 @@ const CubeLogic = (() => {
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.4',
+  version: '2.5',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.5',
+      date: '2026-10-16',
+      title: 'Timer',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Timer page: hold Space until the time turns green, release to start, press any key to stop. Works by touch on a phone too.',
+            'A random-move scramble for each solve, optional 15-second inspection with +2 and DNF, and +2 / DNF / delete on any solve.',
+            'Best, mean, average of 5, best average of 5 and average of 12 (fastest and slowest dropped, as in WCA averages). Solves are saved in your browser.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.4',
       date: '2026-10-16',
@@ -1486,6 +1544,97 @@ const WcaBoard = (function () {
   }
 
   return { EVENTS: EVENTS, NO_AVERAGE: NO_AVERAGE, formatTime: formatTime, parseRanking: parseRanking, load: load };
+})();
+
+
+</script>
+<script>
+/**
+ * Speedcubing timer helpers: scrambles, penalties, averages and time formatting.
+ * Pure functions only; the page wires them to the keyboard and the screen.
+ */
+const TimerLogic = (function () {
+  'use strict';
+
+  var FACES = ['U', 'R', 'F', 'D', 'L', 'B'];
+  var AXIS = { U: 0, D: 0, R: 1, L: 1, F: 2, B: 2 };
+  var SUFFIX = ['', '2', "'"];
+
+  /** A random-move scramble: no face twice in a row, and no three turns in a row on one axis. */
+  function scramble(rand, length) {
+    var n = length || 20, out = [], last = null, prev = null;
+    while (out.length < n) {
+      var f = FACES[Math.floor(rand() * 6)];
+      if (f === last) continue;
+      if (prev !== null && last !== null && AXIS[f] === AXIS[last] && AXIS[f] === AXIS[prev]) continue;
+      out.push(f + SUFFIX[Math.floor(rand() * 3)]);
+      prev = last; last = f;
+    }
+    return out.join(' ');
+  }
+
+  /** What a solve counts as: milliseconds, or Infinity for a DNF. */
+  function effective(s) {
+    if (!s) return NaN;
+    if (s.pen === -1) return Infinity;
+    return s.ms + (s.pen === 2 ? 2000 : 0);
+  }
+
+  /** 12.34, 1:02.34, 1:02:03.40, or "DNF". Milliseconds are cut (not rounded) to hundredths, like a stopwatch. */
+  function format(ms) {
+    if (ms === Infinity) return 'DNF';
+    if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '–';
+    var cs = Math.floor(ms / 10);
+    var h = Math.floor(cs / 360000), m = Math.floor((cs % 360000) / 6000), s = Math.floor((cs % 6000) / 100), c = cs % 100;
+    var sec = (h || m ? (s < 10 ? '0' : '') : '') + s + '.' + (c < 10 ? '0' : '') + c;
+    return h ? h + ':' + (m < 10 ? '0' : '') + m + ':' + sec : m ? m + ':' + sec : sec;
+  }
+  function formatSolve(s) {
+    if (!s) return '–';
+    var e = effective(s);
+    return e === Infinity ? 'DNF' : format(e) + (s.pen === 2 ? '+' : '');
+  }
+
+  /**
+   * Average of the last `n` solves the WCA way: drop the fastest and slowest (5%, at least one each),
+   * average the rest. More than the dropped number of DNFs makes it a DNF. Needs n solves, else null.
+   */
+  function averageOf(solves, n) {
+    if (solves.length < n) return null;
+    var vals = solves.slice(solves.length - n).map(effective).sort(function (a, b) { return a - b; });
+    var trim = Math.max(1, Math.ceil(n * 0.05));
+    var kept = vals.slice(trim, n - trim);
+    var sum = 0;
+    for (var i = 0; i < kept.length; i++) { if (kept[i] === Infinity) return Infinity; sum += kept[i]; }
+    return sum / kept.length;
+  }
+
+  /** The best average of `n` over the whole session, or null. */
+  function bestAverageOf(solves, n) {
+    var best = null;
+    for (var end = n; end <= solves.length; end++) {
+      var a = averageOf(solves.slice(0, end), n);
+      if (a !== null && (best === null || a < best)) best = a;
+    }
+    return best;
+  }
+
+  /** Mean of all counting solves (DNFs ignored), or null if there are none. */
+  function mean(solves) {
+    var vals = solves.map(effective).filter(function (v) { return v !== Infinity; });
+    if (!vals.length) return null;
+    return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+  }
+  function best(solves) {
+    var vals = solves.map(effective).filter(function (v) { return v !== Infinity; });
+    return vals.length ? Math.min.apply(null, vals) : null;
+  }
+
+  /** Inspection: the penalty for starting after `ms` of inspection. 0 = fine, 2 = +2, -1 = DNF. */
+  function inspectionPenalty(ms) { return ms > 17000 ? -1 : ms > 15000 ? 2 : 0; }
+
+  return { scramble: scramble, effective: effective, format: format, formatSolve: formatSolve,
+    averageOf: averageOf, bestAverageOf: bestAverageOf, mean: mean, best: best, inspectionPenalty: inspectionPenalty };
 })();
 
 
@@ -2085,6 +2234,126 @@ const WcaBoard = (function () {
     if (moves.length) { gotoStep(0); solve(); }
   });
 
+  // ---- Timer ----
+  var TM = TimerLogic;
+  var tmSolves = [], tmState = 'idle', tmHoldAt = 0, tmStart = 0, tmRaf = 0, tmInspectAt = 0, tmInspectPen = 0, tmHoldTimer = 0, tmOpen = false;
+  var tmScr = '';
+  try { var tmSaved = JSON.parse(localStorage.getItem('cube-timer') || '[]'); if (Array.isArray(tmSaved)) tmSolves = tmSaved.filter(function (s) { return s && typeof s.ms === 'number'; }); } catch (err) { /* storage unavailable */ }
+  function tmSave() { try { localStorage.setItem('cube-timer', JSON.stringify(tmSolves.slice(-1000))); } catch (err) { /* storage unavailable */ } }
+  function tmNewScramble() { tmScr = TM.scramble(Math.random, 20); $('tmScramble').textContent = tmScr; }
+  function tmSet(state, hint) { tmState = state; $('tmBox').dataset.s = state; $('tmHint').textContent = hint || ''; }
+  function tmIdleHint() { return $('tmInspect').checked ? 'Hold Space to start inspection' : 'Hold Space to get ready'; }
+  function tmShowTime(ms) { $('tmTime').textContent = TM.format(ms); }
+  function tmTick() {
+    if (tmState === 'running') { tmShowTime(performance.now() - tmStart); tmRaf = requestAnimationFrame(tmTick); }
+    else if (tmState === 'inspect' || tmState === 'holding' || tmState === 'ready') {
+      if (tmInspectAt) {
+        var left = 15 - (performance.now() - tmInspectAt) / 1000;
+        $('tmTime').textContent = left > 0 ? String(Math.ceil(left)) : left > -2 ? '+2' : 'DNF';
+      }
+      tmRaf = requestAnimationFrame(tmTick);
+    }
+  }
+  function tmDown() {
+    if (tmState === 'running') { tmStop(); return; }
+    if (tmState !== 'idle' && tmState !== 'inspect') return;
+    if (tmState === 'idle' && $('tmInspect').checked && !tmInspectAt) {
+      // first press starts inspection
+      tmInspectAt = performance.now(); tmSet('inspect', 'Hold Space to get ready, release to start');
+      cancelAnimationFrame(tmRaf); tmRaf = requestAnimationFrame(tmTick);
+      return;
+    }
+    tmHoldAt = performance.now();
+    tmSet('holding', 'Keep holding…');
+    clearTimeout(tmHoldTimer);
+    tmHoldTimer = setTimeout(function () { if (tmState === 'holding') tmSet('ready', 'Release to start'); }, 300);
+  }
+  function tmUp() {
+    clearTimeout(tmHoldTimer);
+    if (tmState === 'ready') {
+      if (tmInspectAt) { tmInspectPen = TM.inspectionPenalty(performance.now() - tmInspectAt); }
+      tmInspectAt = 0;
+      tmStart = performance.now(); tmSet('running', 'Press any key to stop');
+      cancelAnimationFrame(tmRaf); tmRaf = requestAnimationFrame(tmTick);
+    } else if (tmState === 'holding') {
+      // let go too early: back to waiting
+      tmSet(tmInspectAt ? 'inspect' : 'idle', tmInspectAt ? 'Hold Space to get ready, release to start' : tmIdleHint());
+    }
+  }
+  function tmStop() {
+    var ms = performance.now() - tmStart;
+    cancelAnimationFrame(tmRaf);
+    var pen = tmInspectPen; tmInspectPen = 0;
+    tmShowTime(ms);
+    tmSolves.push({ ms: Math.floor(ms / 10) * 10, pen: pen, scr: tmScr, t: Date.now() });
+    tmSave(); tmNewScramble(); tmSet('idle', tmIdleHint()); tmRender();
+  }
+  function tmStat(label, v) { var d = el('div', 'tm-stat'); d.appendChild(el('b', '', v)); d.appendChild(el('span', '', label)); return d; }
+  function tmRender() {
+    var st = $('tmStats'); st.innerHTML = '';
+    var b = TM.best(tmSolves), a5 = TM.averageOf(tmSolves, 5), a12 = TM.averageOf(tmSolves, 12), m = TM.mean(tmSolves);
+    var f = function (v) { return v === null ? '–' : TM.format(v); };
+    st.appendChild(tmStat('Solves', String(tmSolves.length)));
+    st.appendChild(tmStat('Best', f(b)));
+    st.appendChild(tmStat('Mean', f(m)));
+    st.appendChild(tmStat('Average of 5', f(a5)));
+    st.appendChild(tmStat('Best Ao5', f(TM.bestAverageOf(tmSolves, 5))));
+    st.appendChild(tmStat('Average of 12', f(a12)));
+    var list = $('tmList'); list.innerHTML = '';
+    tmSolves.slice(-100).reverse().forEach(function (s) {
+      var li = el('li'), row = el('div');
+      row.appendChild(el('span', 'tt', TM.formatSolve(s)));
+      row.appendChild(el('span', 'sc', s.scr || ''));
+      var p2 = el('button', '', '+2'); p2.type = 'button'; p2.setAttribute('aria-pressed', s.pen === 2 ? 'true' : 'false'); p2.dataset.a = 'p2';
+      var dnf = el('button', '', 'DNF'); dnf.type = 'button'; dnf.setAttribute('aria-pressed', s.pen === -1 ? 'true' : 'false'); dnf.dataset.a = 'dnf';
+      var del = el('button', '', 'Delete'); del.type = 'button'; del.dataset.a = 'del';
+      [p2, dnf, del].forEach(function (x) { x.dataset.t = s.t; row.appendChild(x); });
+      li.appendChild(row); list.appendChild(li);
+    });
+    if (tmSolves.length && tmState === 'idle') { var last = tmSolves[tmSolves.length - 1]; $('tmTime').textContent = TM.formatSolve(last); }
+    if (!tmSolves.length && tmState === 'idle') $('tmTime').textContent = '0.00';
+  }
+  $('tmList').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-a]') : null;
+    if (!b) return;
+    var t = Number(b.dataset.t), i = -1;
+    for (var k = 0; k < tmSolves.length; k++) if (tmSolves[k].t === t) { i = k; break; }
+    if (i < 0) return;
+    if (b.dataset.a === 'del') tmSolves.splice(i, 1);
+    else if (b.dataset.a === 'p2') tmSolves[i].pen = tmSolves[i].pen === 2 ? 0 : 2;
+    else tmSolves[i].pen = tmSolves[i].pen === -1 ? 0 : -1;
+    tmSave(); tmRender();
+  });
+  $('tmClear').addEventListener('click', function () {
+    if (tmSolves.length && window.confirm('Delete all ' + tmSolves.length + ' saved solves?')) { tmSolves = []; tmSave(); tmRender(); }
+  });
+  $('tmNext').addEventListener('click', function () { if (tmState === 'idle' || tmState === 'inspect') tmNewScramble(); this.blur(); });
+  $('tmInspect').addEventListener('change', function () { tmInspectAt = 0; if (tmState === 'inspect') tmSet('idle', tmIdleHint()); else $('tmHint').textContent = tmIdleHint(); this.blur(); });
+  function tmKeyOk(e) {
+    var t = e.target, tag = t && t.tagName;
+    return tmOpen && !e.ctrlKey && !e.metaKey && !e.altKey && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && tag !== 'BUTTON';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!tmKeyOk(e) && !(tmOpen && tmState === 'running')) return;
+    if (tmState === 'running') { e.preventDefault(); tmDown(); return; }
+    if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); if (!e.repeat) tmDown(); }
+    else if (e.key === 'Escape' && tmInspectAt) { tmInspectAt = 0; tmSet('idle', tmIdleHint()); $('tmTime').textContent = '0.00'; }
+  });
+  document.addEventListener('keyup', function (e) {
+    if (!tmOpen) return;
+    if (e.code === 'Space' || e.key === ' ') { if (tmState === 'holding' || tmState === 'ready') { e.preventDefault(); tmUp(); } }
+  });
+  var tmBox = $('tmBox');
+  tmBox.addEventListener('pointerdown', function (e) { e.preventDefault(); tmDown(); });
+  window.addEventListener('pointerup', function () { if (tmState === 'holding' || tmState === 'ready') tmUp(); });
+  tmBox.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  function timerPageOpen(open) {
+    tmOpen = open;
+    if (!open && tmState !== 'running') { cancelAnimationFrame(tmRaf); tmInspectAt = 0; tmSet('idle', tmIdleHint()); }
+    if (open) { if (!tmScr) tmNewScramble(); tmRender(); if (tmState === 'idle') $('tmHint').textContent = tmIdleHint(); }
+  }
+  tmSet('idle', tmIdleHint()); tmNewScramble(); tmRender();
+
   // ---- WCA Top 100 ----
   var lbEvent = '333', lbType = 'single', lbToken = 0, lbCtl = null, lbLoaded = '';
   (function initBoard() {
@@ -2164,17 +2433,18 @@ const WcaBoard = (function () {
   syncBoardControls();
 
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var PAGES = { '': 'solver', '/': 'solver', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var PAGES = { '': 'solver', '/': 'solver', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     document.title = PAGE_TITLE[name];
     if (name !== 'solver') pause();
     if (name === 'leaderboard') loadBoard();
+    timerPageOpen(name === 'timer');
     window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);

@@ -3,9 +3,24 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.4',
+  version: '2.5',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.5',
+      date: '2026-10-16',
+      title: 'Timer',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Timer page: hold Space until the time turns green, release to start, press any key to stop. Works by touch on a phone too.',
+            'A random-move scramble for each solve, optional 15-second inspection with +2 and DNF, and +2 / DNF / delete on any solve.',
+            'Best, mean, average of 5, best average of 5 and average of 12 (fastest and slowest dropped, as in WCA averages). Solves are saved in your browser.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.4',
       date: '2026-10-16',
