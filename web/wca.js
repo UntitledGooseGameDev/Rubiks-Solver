@@ -3,7 +3,7 @@
  *
  * Data comes from the unofficial WCA REST API, which publishes the official WCA
  * results export as static JSON files, refreshed once a day:
- *   api/rank/{region}/{type}/{event}.json
+ *   v1/rank/{region}/{type}/{event}.json (the API's documented layout)
  * This file only fetches and reads that data; nothing is stored or made up.
  * Field names are read defensively so a small change in the API's shape does not
  * silently show wrong numbers: anything unreadable becomes a clear error.
@@ -14,11 +14,10 @@ const WcaBoard = (function () {
   // Where the static files might live. Each is tried in turn, and every failure is reported,
   // because the exact hosting layout could not be checked when this was written.
   var BASES = [
-    'https://wca-rest-api.robiningelbrecht.be/api/',
-    'https://wca-rest-api.robiningelbrecht.be/',
-    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/api/api/',
-    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api/',
-    'https://cdn.jsdelivr.net/gh/robiningelbrecht/wca-rest-api@api/api/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/refs/heads/api/v1/',
+    'https://cdn.jsdelivr.net/gh/robiningelbrecht/wca-rest-api@api/v1/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/refs/heads/master/v1/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/refs/heads/main/v1/',
   ];
 
   var EVENTS = [
