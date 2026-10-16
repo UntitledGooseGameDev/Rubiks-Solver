@@ -3,9 +3,30 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.0',
+  version: '2.1',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.1',
+      date: '2026-10-15',
+      title: 'Start with white',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Start with: choose the color for the first layer and cross in Beginner and CFOP. Any of the six colors works.',
+            'The 3D cube turns so your chosen color is on the bottom, and the steps tell you which colors are on top and facing you.',
+          ],
+        },
+        {
+          heading: 'Changed',
+          items: [
+            'White is now the default first color. Before, the cross was always yellow.',
+            'Moves like R and U in Beginner and CFOP always mean the right and top of the cube as you hold it in the 3D view.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.0',
       date: '2026-10-15',

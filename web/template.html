@@ -267,6 +267,10 @@
   .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
   .seg button:not([aria-checked="true"]):not(:disabled):hover { color: var(--fg); }
   .seg button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .startwith { margin: 0 0 14px; }
+  .startwith[hidden] { display: none; }
+  .sw-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--dim); }
+  .sw-note { margin: 6px 0 0; color: var(--dim); font-size: 13px; }
   .method-desc { margin: 10px 0 14px; color: var(--dim); font-size: 14px; }
 
   .plan { margin-top: 16px; display: grid; gap: 20px; }
@@ -434,6 +438,18 @@
           <button type="button" role="radio" data-m="fast" aria-checked="false">Fastest</button>
         </div>
         <p class="method-desc" id="methodDesc"></p>
+        <div class="startwith" id="startWith">
+          <span class="sw-label" id="swLabel">Start with</span>
+          <div class="seg" id="bottomSeg" role="radiogroup" aria-labelledby="swLabel">
+            <button type="button" role="radio" data-b="U" aria-checked="true">White</button>
+            <button type="button" role="radio" data-b="D" aria-checked="false">Yellow</button>
+            <button type="button" role="radio" data-b="F" aria-checked="false">Green</button>
+            <button type="button" role="radio" data-b="B" aria-checked="false">Blue</button>
+            <button type="button" role="radio" data-b="R" aria-checked="false">Red</button>
+            <button type="button" role="radio" data-b="L" aria-checked="false">Orange</button>
+          </div>
+          <p class="sw-note">The first layer and cross use this color. The 3D cube turns so that color is on the bottom.</p>
+        </div>
         <button class="btn primary" id="btnSolve">Solve this cube</button>
         <p class="status" id="solveStatus" role="status"></p>
         <div class="plan" id="plan" aria-label="Solution steps"></div>
@@ -518,8 +534,8 @@
       <details class="faq"><summary>The solution didn&rsquo;t solve my real cube</summary><div>
         <p>Work through the checklist at the top. The two most common causes are one wrong sticker in the page&rsquo;s cube, and holding the cube differently from the 3D view (for example, turning the whole cube between steps).</p>
       </div></details>
-      <details class="faq"><summary>Why does Beginner build the &ldquo;bottom&rdquo; first? My guide starts on top.</summary><div>
-        <p>Beginner and CFOP both build the first layer on the bottom face and finish on top, so the cube stays in the same position the whole time. With a standard cube that means the yellow side first and white last. The algorithms are the same ones taught elsewhere, only with the colors swapped.</p>
+      <details class="faq"><summary>Can I start with a different color than white?</summary><div>
+        <p>Yes. Under the method buttons, <em>Start with</em> picks the color for the first layer and cross; white is the default. The 3D cube turns so that color is on the bottom, because the steps always build the first layer underneath. Hold your cube the same way as the 3D view and every move (R, U and so on) will match what you see.</p>
       </div></details>
       <details class="faq"><summary>Beginner repeats the same algorithm up to five times</summary><div>
         <p>That is how Righty, Lefty and the corner twist work: repeat the short algorithm until the corner drops in or twists the right way. The page shows the repeats as one step (for example <em>Righty &times;3</em>).</p>
@@ -648,7 +664,30 @@
     }
   }
 
-  function applyView() { cubeEl.style.transform = 'rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)'; }
+  // Which real face is held at the bottom (Beginner and CFOP only). The cube is turned
+  // so that face is down; FRAME says which real face plays each of U R F D L B.
+  var FRAME = {
+    D: { U: 'U', D: 'D', R: 'R', L: 'L', F: 'F', B: 'B' },
+    U: { U: 'D', D: 'U', R: 'L', L: 'R', F: 'F', B: 'B' },
+    F: { U: 'B', D: 'F', F: 'U', B: 'D', R: 'R', L: 'L' },
+    B: { U: 'F', D: 'B', F: 'D', B: 'U', R: 'R', L: 'L' },
+    R: { U: 'L', D: 'R', R: 'U', L: 'D', F: 'F', B: 'B' },
+    L: { U: 'R', D: 'L', R: 'D', L: 'U', F: 'F', B: 'B' }
+  };
+  var AXIS_V = { U: [0, 1, 0], R: [1, 0, 0], F: [0, 0, 1], D: [0, -1, 0], L: [-1, 0, 0], B: [0, 0, -1] };
+  var bottomFace = 'U';     // white first by default
+  try { var savedBottom = localStorage.getItem('cube-bottom'); if (savedBottom && FRAME[savedBottom]) bottomFace = savedBottom; } catch (err) { /* storage unavailable */ }
+  function viewBottom() { return method === 'fast' ? 'D' : bottomFace; }
+  function baseMatrix() {
+    var m = FRAME[viewBottom()];
+    var e = [AXIS_V[m.R], AXIS_V[m.U], AXIS_V[m.F]], dgn = [1, -1, 1], out = [];
+    for (var j = 0; j < 3; j++) { for (var i = 0; i < 3; i++) out.push(dgn[i] * dgn[j] * e[i][j]); out.push(0); }
+    out.push(0, 0, 0, 1);
+    return 'matrix3d(' + out.join(',') + ')';
+  }
+  function applyView() { cubeEl.style.transform = 'rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) ' + baseMatrix(); }
+  /** Name of solution move i as the person turns it (cube held with the chosen color down). */
+  function shownMove(i) { return plan && plan.moves && plan.moves[i] ? L.moveName(L.parseAlg(plan.moves[i])[0]) : L.moveName(moves[i]); }
 
   function paintCube() {
     for (var i = 0; i < faces.length; i++) {
@@ -878,9 +917,10 @@
 
     var tools = el('div', 'plan-tools');
     var note = el('p', 'plan-note');
+    var fm = (plan.frame && plan.frame.map) || FRAME.D;
     richText(note, plan.method === 'fast'
       ? 'Click any move to jump to it.'
-      : 'Keep the cube like the 3D view: [U] on top, [F] facing you. We build the [D] layer first and finish on top.');
+      : 'Keep the cube like the 3D view: [' + fm.U + '] on top, [' + fm.F + '] facing you. We build the [' + fm.D + '] layer first and finish on top. Moves like R and U mean the right and top of the cube as you hold it.');
     var toggle = el('button', 'linkbtn', 'Show all moves');
     toggle.type = 'button'; toggle.id = 'btnToggleMoves';
     tools.appendChild(note); tools.appendChild(toggle);
@@ -985,14 +1025,16 @@
     var stepTitle = plan && cur >= 0 ? plain(plan.steps[cur].title) : '';
     $('progress').textContent = has
       ? (idx >= moves.length ? 'Solved after ' + moves.length + ' moves'
-        : 'Move ' + (idx + 1) + ' of ' + moves.length + (stepTitle && plan.method !== 'fast' ? ' · ' + stepTitle : '') + ' · next ' + L.moveName(moves[idx]))
+        : 'Move ' + (idx + 1) + ' of ' + moves.length + (stepTitle && plan.method !== 'fast' ? ' · ' + stepTitle : '') + ' · next ' + shownMove(idx))
       : '';
-    $('moveLabel').textContent = idx > 0 && has ? L.moveName(moves[idx - 1]) : '';
+    $('moveLabel').textContent = idx > 0 && has ? shownMove(idx - 1) : '';
     $('btnScramble').disabled = busy || solving;
     $('btnReset').disabled = busy || solving;
     $('btnSolve').disabled = busy || solving;
     var seg = $('methodSeg').querySelectorAll('button');
     for (var q = 0; q < seg.length; q++) seg[q].disabled = busy || solving;
+    var seg2 = $('bottomSeg').querySelectorAll('button');
+    for (var q2 = 0; q2 < seg2.length; q2++) seg2[q2].disabled = busy || solving;
   }
 
   function gotoStep(k) {
@@ -1080,7 +1122,7 @@
     if (worker) return worker;
     try {
       var src = document.getElementById('solver-src').textContent;
-      var code = src + '\nself.onmessage=function(e){try{self.postMessage(CubeSolver.solveForMethod(e.data.facelets,e.data.method))}catch(err){self.postMessage({ok:false,code:"INTERNAL",message:String(err&&err.message||err)})}};';
+      var code = src + '\nself.onmessage=function(e){try{self.postMessage(CubeSolver.solveForMethod(e.data.facelets,e.data.method,{bottom:e.data.bottom}))}catch(err){self.postMessage({ok:false,code:"INTERNAL",message:String(err&&err.message||err)})}};';
       worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
       worker.onmessage = function (e) { var cb = pending; pending = null; if (cb) cb(e.data); };
       worker.onerror = function () { worker = null; var cb = pending; pending = null; if (cb) solveOnMainThread(cb); };
@@ -1091,13 +1133,13 @@
   function solveOnMainThread(cb) {
     setTimeout(function () {
       var r;
-      try { r = CubeSolver.solveForMethod(lastRequest.facelets, lastRequest.method); }
+      try { r = CubeSolver.solveForMethod(lastRequest.facelets, lastRequest.method, { bottom: lastRequest.bottom }); }
       catch (err) { r = { ok: false, code: 'INTERNAL', message: String(err && err.message || err) }; }
       cb(r);
     }, 30);
   }
   function requestSolve(facelets, m, cb) {
-    lastRequest = { facelets: facelets, method: m };
+    lastRequest = { facelets: facelets, method: m, bottom: bottomFace };
     var w = getWorker();
     if (!w) { solveOnMainThread(cb); return; }
     pending = cb;
@@ -1117,7 +1159,7 @@
       if (!r || !r.ok) { setStatus((r && r.message) || 'The solver could not finish.', true); updateTransport(); return; }
       startState = snapshot;
       plan = r;
-      moves = L.parseAlg(r.moves.join(' '));
+      moves = L.parseAlg((r.actualMoves || r.moves).join(' '));
       idx = 0;
       buildPlan();
       setStatus('Found ' + (/^(8|11|18)$/.test(String(r.length)) ? 'an ' : 'a ') + r.length + '-move ' + METHOD_INFO[used].label + ' solution in ' + (r.ms / 1000).toFixed(2) + ' s.', false);
@@ -1132,6 +1174,11 @@
       b.setAttribute('aria-checked', b.dataset.m === method ? 'true' : 'false');
     });
     $('methodDesc').textContent = METHOD_INFO[method].desc;
+    $('startWith').hidden = method === 'fast';
+    Array.prototype.forEach.call($('bottomSeg').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-checked', b.dataset.b === bottomFace ? 'true' : 'false');
+    });
+    applyView();
     $('planNote').textContent = METHOD_INFO[method].note;
   }
   $('methodSeg').addEventListener('click', function (e) {
@@ -1141,6 +1188,14 @@
     try { localStorage.setItem('cube-method', method); } catch (err) { /* storage unavailable */ }
     renderMethod();
     if (moves.length) { gotoStep(0); solve(); } // same cube, new method
+  });
+  $('bottomSeg').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-b]') : null;
+    if (!b || b.disabled || busy || solving || b.dataset.b === bottomFace) return;
+    bottomFace = b.dataset.b;
+    try { localStorage.setItem('cube-bottom', bottomFace); } catch (err) { /* storage unavailable */ }
+    renderMethod();
+    if (moves.length) { gotoStep(0); solve(); }
   });
 
   // ---- pages: Solver / Troubleshooting / Update log ----

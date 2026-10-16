@@ -25,9 +25,13 @@ export interface Plan {
   method: MethodId | 'fast';
   stages: Stage[];
   steps: Step[];
-  /** Every move in order (same as steps flattened). */
+  /** Every move in order (same as steps flattened), written for the cube held with `frame.bottom` down. */
   moves: string[];
   length: number;
+  /** The same moves on the real faces, for animating the cube as it is. */
+  actualMoves: string[];
+  /** Which real face is held at the bottom, and what each letter in `moves` means on the real cube. */
+  frame: { bottom: string; map: Record<string, string> };
 }
 
 export const faceToken = (face: number) => `[${FACE_LETTERS[face]}]`;
@@ -89,6 +93,7 @@ export class PlanBuilder {
   build(method: MethodId): Plan {
     this.steps = this.tidy();
     const moves = this.steps.flatMap((s) => s.moves);
-    return { method, stages: this.stages, steps: this.steps, moves, length: moves.length };
+    const ident: Record<string, string> = { U: 'U', R: 'R', F: 'F', D: 'D', L: 'L', B: 'B' };
+    return { method, stages: this.stages, steps: this.steps, moves, length: moves.length, actualMoves: moves, frame: { bottom: 'D', map: ident } };
   }
 }

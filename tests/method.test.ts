@@ -275,3 +275,23 @@ test('direct solver functions agree with the unified API', () => {
   assert.ok(solveCfop(cube).length > 0);
   void F;
 });
+
+test('Start-with color: every bottom face gets solved, with a real-face move list', () => {
+  const rand = rng(77);
+  const bottoms = ['D', 'U', 'F', 'B', 'R', 'L'] as const;
+  for (const method of ['beginner', 'cfop'] as const) {
+    for (const bottom of bottoms) {
+      for (let n = 0; n < 4; n++) {
+        const start = cubieToFacelets(randomCubie(rand));
+        const r = solveForMethod(start, method, { bottom });
+        assert.ok(r.ok, `${method}/${bottom} failed`);
+        if (!r.ok) continue;
+        assert.equal(r.frame.bottom, bottom);
+        assert.equal(r.actualMoves.length, r.moves.length);
+        const sim = new Sim(start);
+        sim.apply(r.actualMoves.join(' '));
+        assert.equal(sim.facelets(), SOLVED_FACELETS, `${method}/${bottom} not solved`);
+      }
+    }
+  }
+});
