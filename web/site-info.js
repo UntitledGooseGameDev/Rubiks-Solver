@@ -3,9 +3,29 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.6',
+  version: '2.7',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.7',
+      date: '2026-10-16',
+      title: 'Slice moves',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Apply your own moves now accepts the slice moves M, E and S (with 2 and ’), animated on the 3D cube. M turns like L, E like D and S like F.',
+            'The solver works from the cube’s center colors, so you can scramble with slice moves and still solve it.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'Solutions still use face turns only (U R F D L B). Slice moves are for your own moves.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.6',
       date: '2026-10-16',

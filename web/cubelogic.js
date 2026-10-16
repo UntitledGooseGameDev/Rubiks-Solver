@@ -10,6 +10,14 @@ const CubeLogic = (() => {
   /** Outward axis of each face, world coords: x right, y up, z toward the viewer. */
   const AXES = [[0, 1, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0], [-1, 0, 0], [0, 0, -1]];
 
+  /**
+   * Slice moves are faces 6 (M), 7 (E) and 8 (S). Each turns the middle layer in the direction of
+   * a face: M like L, E like D, S like F. They are applied to the stickers whose position is 0 on that axis.
+   */
+  const MOVE_LETTERS = 'URFDLBMES';
+  const SLICE_AXES = { 6: [-1, 0, 0], 7: [0, -1, 0], 8: [0, 0, 1] };
+  const axisOf = (face) => (face < 6 ? AXES[face] : SLICE_AXES[face]);
+
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const cross = (a, b) => [
     a[1] * b[2] - a[2] * b[1],
@@ -52,19 +60,22 @@ const CubeLogic = (() => {
   const GEO = Array.from({ length: 54 }, (_, i) => faceletGeometry(i));
   const INDEX = new Map(GEO.map((g, i) => [key(g.pos, g.nor), i]));
 
+  /** Is a sticker at position p in the layer turned by this move? */
+  const inLayer = (face, p) => dot(p, axisOf(face)) === (face < 6 ? 1 : 0);
+
   /** PERMS[face*3 + power-1][i] = where the sticker at i ends up. */
   const PERMS = [];
-  for (let face = 0; face < 6; face++) {
+  for (let face = 0; face < 9; face++) {
     for (let power = 1; power <= 3; power++) {
       const perm = new Array(54);
       for (let i = 0; i < 54; i++) {
         const g = GEO[i];
-        if (dot(g.pos, AXES[face]) === 1) {
+        if (inLayer(face, g.pos)) {
           let p = g.pos;
           let n = g.nor;
           for (let q = 0; q < power; q++) {
-            p = quarterCW(p, AXES[face]);
-            n = quarterCW(n, AXES[face]);
+            p = quarterCW(p, axisOf(face));
+            n = quarterCW(n, axisOf(face));
           }
           perm[i] = INDEX.get(key(p, n));
         } else {
@@ -83,7 +94,7 @@ const CubeLogic = (() => {
   }
 
   function moveName(m) {
-    return LETTERS[m.face] + ['', '2', "'"][m.power - 1];
+    return MOVE_LETTERS[m.face] + ['', '2', "'"][m.power - 1];
   }
 
   function invertMove(m) {
@@ -94,9 +105,9 @@ const CubeLogic = (() => {
   function parseAlg(text) {
     const out = [];
     for (const tok of text.trim().split(/\s+/).filter(Boolean)) {
-      const m = /^([URFDLB])([123]?)(['’]?)$/i.exec(tok);
-      if (!m) throw new Error('"' + tok + '" is not a valid move. Use U R F D L B with an optional 2 or \'.');
-      const face = LETTERS.indexOf(m[1].toUpperCase());
+      const m = /^([URFDLBMES])([123]?)(['’]?)$/i.exec(tok);
+      if (!m) throw new Error('"' + tok + '" is not a valid move. Use U R F D L B or the slice moves M E S, with an optional 2 or \'.');
+      const face = MOVE_LETTERS.indexOf(m[1].toUpperCase());
       let power = m[2] ? parseInt(m[2], 10) : 1;
       if (m[3]) power = (4 - power) % 4;
       power %= 4;
@@ -155,7 +166,7 @@ const CubeLogic = (() => {
   }
 
   return {
-    LETTERS, SOLVED, AXES, GEO, dot, cross, rotate,
+    LETTERS, MOVE_LETTERS, SOLVED, AXES, axisOf, inLayer, GEO, dot, cross, rotate,
     applyMove, applyMoves, applyAlg, parseAlg, moveName, invertMove, scramble, isSolved, renderFaces,
   };
 })();

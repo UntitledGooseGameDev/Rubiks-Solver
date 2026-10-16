@@ -472,9 +472,10 @@
           <form class="alg" id="algForm">
             <label for="algInput">Apply your own moves</label>
             <div class="row">
-              <input type="text" id="algInput" placeholder="R U R' U' F2" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <input type="text" id="algInput" placeholder="R U R' U' F2 M" autocomplete="off" autocapitalize="characters" spellcheck="false">
               <button class="btn" type="submit">Apply</button>
             </div>
+            <p class="sw-note" id="algHint">Face turns U R F D L B, and slice moves <b>M</b> (middle, like L), <b>E</b> (equator, like D) and <b>S</b> (standing, like F). Add 2 for a half turn or &rsquo; for the other way.</p>
             <p class="msg" id="algMsg"></p>
           </form>
         </div>
@@ -755,10 +756,10 @@
   function r5(x) { return Math.round(x * 100000) / 100000; }
 
   function render(anim) {
-    var ax = anim ? L.AXES[anim.face] : null;
+    var ax = anim ? L.axisOf(anim.face) : null;
     for (var i = 0; i < faces.length; i++) {
       var f = faces[i], p = f.c, n = f.n;
-      if (ax && L.dot(p, ax) === 1) { p = L.rotate(p, ax, anim.phi); n = L.rotate(n, ax, anim.phi); }
+      if (ax && L.inLayer(anim.face, p)) { p = L.rotate(p, ax, anim.phi); n = L.rotate(n, ax, anim.phi); }
       // world (x right, y up, z toward viewer) -> CSS (x right, y down, z toward viewer)
       var tx = (p[0] + 0.5 * n[0]) * S, ty = -(p[1] + 0.5 * n[1]) * S, tz = (p[2] + 0.5 * n[2]) * S;
       var nn = [n[0], -n[1], n[2]];
@@ -787,7 +788,16 @@
   var AXIS_V = { U: [0, 1, 0], R: [1, 0, 0], F: [0, 0, 1], D: [0, -1, 0], L: [-1, 0, 0], B: [0, 0, -1] };
   var bottomFace = 'U';     // white first by default
   try { var savedBottom = localStorage.getItem('cube-bottom'); if (savedBottom && FRAME[savedBottom]) bottomFace = savedBottom; } catch (err) { /* storage unavailable */ }
-  function viewBottom() { return method === 'fast' ? 'D' : bottomFace; }
+  // The chosen color is a center color. After slice moves the centers may have moved, so the real
+  // bottom face is found from the cube itself; once a solution exists it says which face it used.
+  function faceOfColor(color, st) {
+    for (var f = 0; f < 6; f++) if (st[f * 9 + 4] === color) return L.LETTERS[f];
+    return color;
+  }
+  function viewBottom() {
+    if (method === 'fast') return 'D';
+    return plan && plan.frame && plan.method !== 'fast' ? plan.frame.bottom : bottomFace;
+  }
   function baseMatrix() {
     var m = FRAME[viewBottom()];
     var e = [AXIS_V[m.R], AXIS_V[m.U], AXIS_V[m.F]], dgn = [1, -1, 1], out = [];
@@ -1000,6 +1010,7 @@
     playing = false; moves = []; idx = 0; startState = state;
     plan = null; stepRanges = []; currentStep = -1;
     planEl.innerHTML = '';
+    applyView();
     setStatus('', false);
     updateTransport();
   }
@@ -1249,7 +1260,7 @@
     }, 30);
   }
   function requestSolve(facelets, m, cb) {
-    lastRequest = { facelets: facelets, method: m, bottom: bottomFace };
+    lastRequest = { facelets: facelets, method: m, bottom: faceOfColor(bottomFace, facelets) };
     var w = getWorker();
     if (!w) { solveOnMainThread(cb); return; }
     pending = cb;
@@ -1269,6 +1280,7 @@
       if (!r || !r.ok) { setStatus((r && r.message) || 'The solver could not finish.', true); updateTransport(); return; }
       startState = snapshot;
       plan = r;
+      applyView();
       moves = L.parseAlg((r.actualMoves || r.moves).join(' '));
       idx = 0;
       buildPlan();
