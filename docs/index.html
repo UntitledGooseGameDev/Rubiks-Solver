@@ -315,6 +315,7 @@
   .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 220px; }
   .lb-details { margin-top: 8px; font-size: 12px; font-weight: 400; }
   .lb-details pre { white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; font: 12px/1.4 var(--mono); color: var(--dim); }
+  img.flag { width: 24px; height: 18px; object-fit: cover; border-radius: 3px; vertical-align: -3px; margin-right: 8px; box-shadow: 0 0 0 1px var(--line); }
   .lb-wrap { overflow-x: auto; }
   table.lb { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.lb[hidden] { display: none; }
@@ -1210,9 +1211,18 @@ const CubeLogic = (() => {
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.3',
+  version: '2.4',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.4',
+      date: '2026-10-16',
+      title: 'Flags on the leaderboard',
+      sections: [
+        { heading: 'New', items: ['Country flags next to each name on the WCA Top 100 page.'] },
+        { heading: 'Fixed', items: ['The WCA Top 100 page now loads the real ranking files.'] },
+      ],
+    },
     {
       version: '2.3',
       date: '2026-10-15',
@@ -2087,6 +2097,18 @@ const WcaBoard = (function () {
       lbType = b.dataset.t; syncBoardControls(); loadBoard(true);
     });
   })();
+  /** Flag image (from flagcdn.com) for a two-letter country code, followed by the code. */
+  function addFlag(td, code) {
+    var cc = String(code || '').toUpperCase();
+    if (/^[A-Z]{2}$/.test(cc) && !/^X/.test(cc)) {
+      var img = document.createElement('img');
+      img.className = 'flag'; img.alt = ''; img.loading = 'lazy'; img.width = 24; img.height = 18;
+      img.src = 'https://flagcdn.com/w40/' + cc.toLowerCase() + '.png';
+      img.onerror = function () { img.remove(); };
+      td.appendChild(img);
+    }
+    td.appendChild(document.createTextNode(cc || ''));
+  }
   function syncBoardControls() {
     var noAvg = WcaBoard.NO_AVERAGE[lbEvent] === 0;
     if (noAvg) lbType = 'single';
@@ -2116,7 +2138,9 @@ const WcaBoard = (function () {
         a.textContent = r.name || r.id;
         [['r', String(r.rank)], ['n', null], ['t', WcaBoard.formatTime(r.best)], ['c', r.country]].forEach(function (c) {
           var td = document.createElement('td'); td.className = c[0];
-          if (c[1] === null) td.appendChild(a); else td.textContent = c[1];
+          if (c[1] === null) td.appendChild(a);
+          else if (c[0] === 'c') addFlag(td, c[1]);
+          else td.textContent = c[1];
           tr.appendChild(td);
         });
         body.appendChild(tr);

@@ -3,9 +3,18 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.3',
+  version: '2.4',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.4',
+      date: '2026-10-16',
+      title: 'Flags on the leaderboard',
+      sections: [
+        { heading: 'New', items: ['Country flags next to each name on the WCA Top 100 page.'] },
+        { heading: 'Fixed', items: ['The WCA Top 100 page now loads the real ranking files.'] },
+      ],
+    },
     {
       version: '2.3',
       date: '2026-10-15',
