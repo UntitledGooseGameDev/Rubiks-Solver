@@ -22,11 +22,15 @@ logic = logic.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 let site = readFileSync(join(root, 'web/site-info.js'), 'utf8');
 site = site.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 
+let wca = readFileSync(join(root, 'web/wca.js'), 'utf8');
+wca = wca.replace(/\nif \(typeof module[\s\S]*$/, '\n');
+
 const page = readFileSync(join(root, 'web/template.html'), 'utf8')
   .replace('/*__BUNDLE__*/', () => bundle)
   .replace('/*__LOGIC__*/', () => logic)
   .replace('/*__SCANUI__*/', () => readFileSync(join(root, 'web/scan-ui.js'), 'utf8'))
-  .replace('/*__SITEINFO__*/', () => site);
+  .replace('/*__SITEINFO__*/', () => site)
+  .replace('/*__WCA__*/', () => wca);
 
 writeFileSync(join(root, 'web/index.html'), page);
 // GitHub Pages serves the docs/ folder, so keep a copy there.

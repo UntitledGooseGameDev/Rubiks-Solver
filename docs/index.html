@@ -308,6 +308,20 @@
   .tok i { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; background: var(--c); margin-right: 0.3em; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); vertical-align: -0.02em; }
 
   /* ---------- text pages ---------- */
+  .doc.wide { max-width: 900px; }
+  .lb-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 12px; }
+  .lb-controls label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--dim); font-size: 14px; }
+  .lb-controls select { font: 500 15px/1 var(--body); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 42px; }
+  .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 220px; }
+  .lb-wrap { overflow-x: auto; }
+  table.lb { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.lb[hidden] { display: none; }
+  table.lb th { text-align: left; color: var(--dim); font-weight: 600; font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.lb td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.lb td.r, table.lb th:first-child { width: 3.2em; color: var(--dim); font-variant-numeric: tabular-nums; }
+  table.lb td.t { font: 600 15px/1 var(--mono); }
+  table.lb a { color: var(--fg); text-decoration: none; }
+  table.lb a:hover { color: var(--accent); text-decoration: underline; }
   .doc { max-width: 820px; margin: 26px auto 0; }
   .doc h2 { font: 700 clamp(1.4rem, 3.2vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.02em; margin: 0 0 8px; }
   .doc .lede { color: var(--dim); margin: 0 0 20px; max-width: 62ch; }
@@ -346,6 +360,7 @@
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
         <a href="#/" data-route="solver">Solver</a>
+        <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
         <a href="#/troubleshooting" data-route="troubleshooting">Troubleshooting</a>
         <a href="#/updates" data-route="updates">Update log</a>
       </nav>
@@ -456,6 +471,24 @@
         <p class="note" id="planNote"></p>
       </section>
     </aside>
+  </main>
+
+  <main class="doc wide" id="view-leaderboard" hidden>
+    <h2>WCA Top 100</h2>
+    <p class="lede">The fastest official results in the world, from World Cube Association competitions. The data is the WCA&rsquo;s own results export, republished daily by an unofficial public API, and it loads straight into your browser.</p>
+    <div class="lb-controls">
+      <label>Event <select id="lbEvent"></select></label>
+      <div class="seg two" id="lbType" role="radiogroup" aria-label="Result type">
+        <button type="button" role="radio" data-t="single" aria-checked="true">Single</button>
+        <button type="button" role="radio" data-t="average" aria-checked="false">Average</button>
+      </div>
+    </div>
+    <p class="status" id="lbStatus" role="status"></p>
+    <div class="lb-wrap"><table class="lb" id="lbTable" hidden>
+      <thead><tr><th>#</th><th>Name</th><th>Result</th><th>Country</th></tr></thead>
+      <tbody id="lbBody"></tbody>
+    </table></div>
+    <p class="note" id="lbNote">Not affiliated with the WCA. Official rankings: <a href="https://www.worldcubeassociation.org/results/rankings" target="_blank" rel="noopener">worldcubeassociation.org/results/rankings</a>.</p>
   </main>
 
   <main class="doc" id="view-troubleshooting" hidden>
@@ -1175,9 +1208,28 @@ const CubeLogic = (() => {
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.2',
+  version: '2.3',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.3',
+      date: '2026-10-15',
+      title: 'WCA Top 100',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'WCA Top 100 page: the world’s fastest official results for 15 events, single or average, loaded in your browser from the World Cube Association results export (republished daily by an unofficial public API). Names link to the WCA profile.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'The page needs an internet connection. If the data cannot be loaded, it says so and links to the official WCA rankings.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.2',
       date: '2026-10-15',
@@ -1289,6 +1341,126 @@ const SiteInfo = {
     },
   ],
 };
+
+
+</script>
+<script>
+/**
+ * WCA Top 100 leaderboard (runs in the browser).
+ *
+ * Data comes from the unofficial WCA REST API, which publishes the official WCA
+ * results export as static JSON files, refreshed once a day:
+ *   api/rank/{region}/{type}/{event}.json
+ * This file only fetches and reads that data; nothing is stored or made up.
+ * Field names are read defensively so a small change in the API's shape does not
+ * silently show wrong numbers: anything unreadable becomes a clear error.
+ */
+const WcaBoard = (function () {
+  'use strict';
+
+  var BASES = [
+    'https://wca-rest-api.robiningelbrecht.be/api/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api/',
+  ];
+
+  var EVENTS = [
+    { id: '333', name: '3x3x3 Cube' }, { id: '222', name: '2x2x2 Cube' }, { id: '444', name: '4x4x4 Cube' },
+    { id: '555', name: '5x5x5 Cube' }, { id: '666', name: '6x6x6 Cube' }, { id: '777', name: '7x7x7 Cube' },
+    { id: '333bf', name: '3x3x3 Blindfolded' }, { id: '333oh', name: '3x3x3 One-Handed' },
+    { id: 'clock', name: 'Clock' }, { id: 'minx', name: 'Megaminx' }, { id: 'pyram', name: 'Pyraminx' },
+    { id: 'skewb', name: 'Skewb' }, { id: 'sq1', name: 'Square-1' },
+    { id: '444bf', name: '4x4x4 Blindfolded' }, { id: '555bf', name: '5x5x5 Blindfolded' },
+  ];
+  var NO_AVERAGE = { '333bf': 0, '444bf': 0, '555bf': 0 }; // blindfold events: only single is offered here
+
+  /** Centiseconds -> "9.42", "1:02.37", "1:02:03.40". */
+  function formatTime(cs) {
+    if (typeof cs !== 'number' || !isFinite(cs) || cs <= 0) return '';
+    var total = Math.round(cs);
+    var h = Math.floor(total / 360000), m = Math.floor((total % 360000) / 6000);
+    var s = Math.floor((total % 6000) / 100), c = total % 100;
+    var sec = (h || m ? (s < 10 ? '0' : '') : '') + s + '.' + (c < 10 ? '0' : '') + c;
+    return h ? h + ':' + (m < 10 ? '0' : '') + m + ':' + sec : m ? m + ':' + sec : sec;
+  }
+
+  function num(v) { var n = typeof v === 'string' ? parseFloat(v) : v; return typeof n === 'number' && isFinite(n) ? n : null; }
+  function pick(o, keys) { for (var i = 0; i < keys.length; i++) { var v = o[keys[i]]; if (v !== undefined && v !== null && v !== '') return v; } return undefined; }
+
+  /** Read one ranking entry; returns null if it has no usable id or time. */
+  function readItem(it, index) {
+    if (!it || typeof it !== 'object') return null;
+    var person = it.person && typeof it.person === 'object' ? it.person : {};
+    var id = pick(it, ['personId', 'wcaId', 'person_id']) || person.id || person.wcaId || (typeof it.id === 'string' && /^\d{4}[A-Z]{4}\d{2}$/.test(it.id) ? it.id : undefined);
+    var best = num(pick(it, ['best', 'result', 'value', 'time']));
+    if (!id || best === null || best <= 0) return null;
+    var rank = it.rank;
+    var worldRank = rank && typeof rank === 'object' ? num(rank.world) : num(rank);
+    return {
+      id: String(id),
+      name: pick(it, ['personName', 'name']) || person.name || '',
+      country: String(pick(it, ['countryId', 'country', 'personCountryId']) || person.countryId || (person.country && person.country.id) || ''),
+      best: best,
+      rank: worldRank,
+      order: index,
+    };
+  }
+
+  /** Turn the API's JSON into the top `limit` rows, fastest first, with ties sharing a rank. */
+  function parseRanking(json, limit) {
+    var list = Array.isArray(json) ? json : json && Array.isArray(json.items) ? json.items : null;
+    if (!list) throw new Error('The ranking file is not in the expected format.');
+    var rows = [];
+    for (var i = 0; i < list.length; i++) { var r = readItem(list[i], i); if (r) rows.push(r); }
+    if (!rows.length) throw new Error('The ranking file has no readable results.');
+    rows.sort(function (a, b) { return a.best - b.best || a.order - b.order; });
+    rows = rows.slice(0, limit || 100);
+    for (var k = 0; k < rows.length; k++) rows[k].rank = k > 0 && rows[k].best === rows[k - 1].best ? rows[k - 1].rank : k + 1;
+    return rows;
+  }
+
+  function getJSON(url, signal) {
+    return fetch(url, { signal: signal, cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  /** Try each data source in turn. */
+  function fetchFirst(path, signal) {
+    var errors = [];
+    return BASES.reduce(function (p, base) {
+      return p.catch(function () { return getJSON(base + path, signal); });
+    }, Promise.reject(new Error('start'))).catch(function (e) {
+      if (e && e.name === 'AbortError') throw e;
+      throw new Error('Could not load the WCA data (' + (e && e.message || 'network error') + ').');
+    });
+  }
+
+  /** Fill in names for rows whose ranking entry had none, a few at a time. */
+  function fillNames(rows, signal, onProgress) {
+    var todo = rows.filter(function (r) { return !r.name || !r.country; });
+    var next = 0;
+    function worker() {
+      if (next >= todo.length) return Promise.resolve();
+      var row = todo[next++];
+      return fetchFirst('persons/' + row.id + '.json', signal).then(function (p) {
+        row.name = row.name || p.name || (p.person && p.person.name) || row.id;
+        row.country = row.country || (p.country && (p.country.id || p.country)) || p.countryId || '';
+      }, function (e) { if (e && e.name === 'AbortError') throw e; row.name = row.name || row.id; }).then(function () { onProgress && onProgress(); return worker(); });
+    }
+    var ws = []; for (var i = 0; i < 8; i++) ws.push(worker());
+    return Promise.all(ws);
+  }
+
+  function load(eventId, type, signal, onNames) {
+    return fetchFirst('rank/world/' + type + '/' + eventId + '.json', signal).then(function (json) {
+      var rows = parseRanking(json, 100);
+      return fillNames(rows, signal, onNames).then(function () { return rows; });
+    });
+  }
+
+  return { EVENTS: EVENTS, NO_AVERAGE: NO_AVERAGE, formatTime: formatTime, parseRanking: parseRanking, load: load };
+})();
 
 
 </script>
@@ -1887,17 +2059,76 @@ const SiteInfo = {
     if (moves.length) { gotoStep(0); solve(); }
   });
 
+  // ---- WCA Top 100 ----
+  var lbEvent = '333', lbType = 'single', lbToken = 0, lbCtl = null, lbLoaded = '';
+  (function initBoard() {
+    var sel = $('lbEvent');
+    WcaBoard.EVENTS.forEach(function (ev) { var o = document.createElement('option'); o.value = ev.id; o.textContent = ev.name; sel.appendChild(o); });
+    sel.addEventListener('change', function () { lbEvent = sel.value; syncBoardControls(); loadBoard(true); });
+    $('lbType').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-t]') : null;
+      if (!b || b.disabled) return;
+      lbType = b.dataset.t; syncBoardControls(); loadBoard(true);
+    });
+  })();
+  function syncBoardControls() {
+    var noAvg = WcaBoard.NO_AVERAGE[lbEvent] === 0;
+    if (noAvg) lbType = 'single';
+    Array.prototype.forEach.call($('lbType').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-checked', b.dataset.t === lbType ? 'true' : 'false');
+      if (b.dataset.t === 'average') b.disabled = noAvg;
+    });
+  }
+  function loadBoard(force) {
+    var key = lbEvent + '/' + lbType;
+    if (!force && lbLoaded === key) return;
+    var token = ++lbToken;
+    if (lbCtl && lbCtl.abort) lbCtl.abort();
+    lbCtl = window.AbortController ? new AbortController() : null;
+    var st = $('lbStatus'), table = $('lbTable'), body = $('lbBody');
+    table.hidden = true; body.innerHTML = '';
+    st.className = 'status'; st.innerHTML = '';
+    var sp = document.createElement('span'); sp.className = 'spin'; st.appendChild(sp);
+    st.appendChild(document.createTextNode('Loading the latest rankings…'));
+    WcaBoard.load(lbEvent, lbType, lbCtl && lbCtl.signal).then(function (rows) {
+      if (token !== lbToken) return;
+      lbLoaded = key;
+      rows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        var a = document.createElement('a');
+        a.href = 'https://www.worldcubeassociation.org/persons/' + encodeURIComponent(r.id); a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = r.name || r.id;
+        [['r', String(r.rank)], ['n', null], ['t', WcaBoard.formatTime(r.best)], ['c', r.country]].forEach(function (c) {
+          var td = document.createElement('td'); td.className = c[0];
+          if (c[1] === null) td.appendChild(a); else td.textContent = c[1];
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      table.hidden = false;
+      st.innerHTML = '';
+      st.textContent = 'Top ' + rows.length + ' ' + (lbType === 'single' ? 'singles' : 'averages') + ' in the world. Updated daily.';
+    }, function (err) {
+      if (token !== lbToken || (err && err.name === 'AbortError')) return;
+      lbLoaded = '';
+      st.className = 'status bad';
+      st.textContent = (err && err.message ? err.message : 'Could not load the rankings.') + ' You can still see the official list at worldcubeassociation.org/results/rankings.';
+    });
+  }
+  syncBoardControls();
+
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var PAGES = { '': 'solver', '/': 'solver', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var PAGES = { '': 'solver', '/': 'solver', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     document.title = PAGE_TITLE[name];
     if (name !== 'solver') pause();
+    if (name === 'leaderboard') loadBoard();
     window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);

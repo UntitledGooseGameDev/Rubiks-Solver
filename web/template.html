@@ -308,6 +308,20 @@
   .tok i { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; background: var(--c); margin-right: 0.3em; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); vertical-align: -0.02em; }
 
   /* ---------- text pages ---------- */
+  .doc.wide { max-width: 900px; }
+  .lb-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 12px; }
+  .lb-controls label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--dim); font-size: 14px; }
+  .lb-controls select { font: 500 15px/1 var(--body); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 42px; }
+  .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 220px; }
+  .lb-wrap { overflow-x: auto; }
+  table.lb { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.lb[hidden] { display: none; }
+  table.lb th { text-align: left; color: var(--dim); font-weight: 600; font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.lb td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.lb td.r, table.lb th:first-child { width: 3.2em; color: var(--dim); font-variant-numeric: tabular-nums; }
+  table.lb td.t { font: 600 15px/1 var(--mono); }
+  table.lb a { color: var(--fg); text-decoration: none; }
+  table.lb a:hover { color: var(--accent); text-decoration: underline; }
   .doc { max-width: 820px; margin: 26px auto 0; }
   .doc h2 { font: 700 clamp(1.4rem, 3.2vw, 1.9rem)/1.15 var(--display); letter-spacing: -0.02em; margin: 0 0 8px; }
   .doc .lede { color: var(--dim); margin: 0 0 20px; max-width: 62ch; }
@@ -346,6 +360,7 @@
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
         <a href="#/" data-route="solver">Solver</a>
+        <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
         <a href="#/troubleshooting" data-route="troubleshooting">Troubleshooting</a>
         <a href="#/updates" data-route="updates">Update log</a>
       </nav>
@@ -456,6 +471,24 @@
         <p class="note" id="planNote"></p>
       </section>
     </aside>
+  </main>
+
+  <main class="doc wide" id="view-leaderboard" hidden>
+    <h2>WCA Top 100</h2>
+    <p class="lede">The fastest official results in the world, from World Cube Association competitions. The data is the WCA&rsquo;s own results export, republished daily by an unofficial public API, and it loads straight into your browser.</p>
+    <div class="lb-controls">
+      <label>Event <select id="lbEvent"></select></label>
+      <div class="seg two" id="lbType" role="radiogroup" aria-label="Result type">
+        <button type="button" role="radio" data-t="single" aria-checked="true">Single</button>
+        <button type="button" role="radio" data-t="average" aria-checked="false">Average</button>
+      </div>
+    </div>
+    <p class="status" id="lbStatus" role="status"></p>
+    <div class="lb-wrap"><table class="lb" id="lbTable" hidden>
+      <thead><tr><th>#</th><th>Name</th><th>Result</th><th>Country</th></tr></thead>
+      <tbody id="lbBody"></tbody>
+    </table></div>
+    <p class="note" id="lbNote">Not affiliated with the WCA. Official rankings: <a href="https://www.worldcubeassociation.org/results/rankings" target="_blank" rel="noopener">worldcubeassociation.org/results/rankings</a>.</p>
   </main>
 
   <main class="doc" id="view-troubleshooting" hidden>
@@ -602,6 +635,9 @@
 </script>
 <script>
 /*__SITEINFO__*/
+</script>
+<script>
+/*__WCA__*/
 </script>
 <script>
 (function () {
@@ -1198,17 +1234,76 @@
     if (moves.length) { gotoStep(0); solve(); }
   });
 
+  // ---- WCA Top 100 ----
+  var lbEvent = '333', lbType = 'single', lbToken = 0, lbCtl = null, lbLoaded = '';
+  (function initBoard() {
+    var sel = $('lbEvent');
+    WcaBoard.EVENTS.forEach(function (ev) { var o = document.createElement('option'); o.value = ev.id; o.textContent = ev.name; sel.appendChild(o); });
+    sel.addEventListener('change', function () { lbEvent = sel.value; syncBoardControls(); loadBoard(true); });
+    $('lbType').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-t]') : null;
+      if (!b || b.disabled) return;
+      lbType = b.dataset.t; syncBoardControls(); loadBoard(true);
+    });
+  })();
+  function syncBoardControls() {
+    var noAvg = WcaBoard.NO_AVERAGE[lbEvent] === 0;
+    if (noAvg) lbType = 'single';
+    Array.prototype.forEach.call($('lbType').querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-checked', b.dataset.t === lbType ? 'true' : 'false');
+      if (b.dataset.t === 'average') b.disabled = noAvg;
+    });
+  }
+  function loadBoard(force) {
+    var key = lbEvent + '/' + lbType;
+    if (!force && lbLoaded === key) return;
+    var token = ++lbToken;
+    if (lbCtl && lbCtl.abort) lbCtl.abort();
+    lbCtl = window.AbortController ? new AbortController() : null;
+    var st = $('lbStatus'), table = $('lbTable'), body = $('lbBody');
+    table.hidden = true; body.innerHTML = '';
+    st.className = 'status'; st.innerHTML = '';
+    var sp = document.createElement('span'); sp.className = 'spin'; st.appendChild(sp);
+    st.appendChild(document.createTextNode('Loading the latest rankings…'));
+    WcaBoard.load(lbEvent, lbType, lbCtl && lbCtl.signal).then(function (rows) {
+      if (token !== lbToken) return;
+      lbLoaded = key;
+      rows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        var a = document.createElement('a');
+        a.href = 'https://www.worldcubeassociation.org/persons/' + encodeURIComponent(r.id); a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = r.name || r.id;
+        [['r', String(r.rank)], ['n', null], ['t', WcaBoard.formatTime(r.best)], ['c', r.country]].forEach(function (c) {
+          var td = document.createElement('td'); td.className = c[0];
+          if (c[1] === null) td.appendChild(a); else td.textContent = c[1];
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      table.hidden = false;
+      st.innerHTML = '';
+      st.textContent = 'Top ' + rows.length + ' ' + (lbType === 'single' ? 'singles' : 'averages') + ' in the world. Updated daily.';
+    }, function (err) {
+      if (token !== lbToken || (err && err.name === 'AbortError')) return;
+      lbLoaded = '';
+      st.className = 'status bad';
+      st.textContent = (err && err.message ? err.message : 'Could not load the rankings.') + ' You can still see the official list at worldcubeassociation.org/results/rankings.';
+    });
+  }
+  syncBoardControls();
+
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var PAGES = { '': 'solver', '/': 'solver', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var PAGES = { '': 'solver', '/': 'solver', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     document.title = PAGE_TITLE[name];
     if (name !== 'solver') pause();
+    if (name === 'leaderboard') loadBoard();
     window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);

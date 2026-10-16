@@ -3,9 +3,28 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.2',
+  version: '2.3',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.3',
+      date: '2026-10-15',
+      title: 'WCA Top 100',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'WCA Top 100 page: the world’s fastest official results for 15 events, single or average, loaded in your browser from the World Cube Association results export (republished daily by an unofficial public API). Names link to the WCA profile.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'The page needs an internet connection. If the data cannot be loaded, it says so and links to the official WCA rankings.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.2',
       date: '2026-10-15',

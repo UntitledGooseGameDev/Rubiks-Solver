@@ -1,6 +1,6 @@
 {
   "name": "rubiks-solver",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "Rubik's Cube solver (two-phase, Beginner and CFOP methods) with photo scanning, in dependency-free TypeScript",
   "scripts": {
