@@ -30,6 +30,8 @@ export interface SolveOptions {
   timeoutMs?: number;
   /** Never return solutions longer than this (searches until found). Default 30. */
   maxLength?: number;
+  /** Give up (throw) if no solution at all has been found after this many ms. Default: never. */
+  giveUpMs?: number;
 }
 
 export type SolveResult =
@@ -44,6 +46,7 @@ class Search {
   private readonly path2: number[] = new Array(40).fill(0);
   private nodes = 0;
   private deadline = Infinity;
+  private hardDeadline = Infinity;
   private timedOut = false;
 
   bestLen: number;
@@ -56,8 +59,10 @@ class Search {
     private readonly targetLength: number,
     private readonly timeoutMs: number,
     maxLength: number,
+    giveUpMs = Infinity,
   ) {
     this.bestLen = maxLength + 1; // a solution must be strictly shorter than this
+    if (giveUpMs !== Infinity) this.hardDeadline = now() + giveUpMs;
   }
 
   run(): number[] | null {
@@ -68,13 +73,16 @@ class Search {
     // depth reaches bestLen nothing shorter can exist in this search order.
     for (let limit = 0; limit < this.bestLen; limit++) {
       if (this.dfs1(twist, flip, slice, 0, limit, -1)) break;
-      if (this.best && now() > this.deadline) break;
+      if ((this.best && now() > this.deadline) || this.timedOut || now() > this.hardDeadline) break;
     }
     return this.best;
   }
 
   private checkTime(): void {
-    if ((++this.nodes & 0x3fff) === 0 && this.best && now() > this.deadline) this.timedOut = true;
+    if ((++this.nodes & 0x3fff) === 0) {
+      const t = now();
+      if ((this.best && t > this.deadline) || t > this.hardDeadline) this.timedOut = true;
+    }
   }
 
   private dfs1(
@@ -168,6 +176,7 @@ export function solveCubieDetailed(
     options.targetLength ?? 0,
     options.timeoutMs ?? 1000,
     options.maxLength ?? 30,
+    options.giveUpMs,
   );
   const sol = search.run();
   if (!sol) throw new Error('No solution found within maxLength; try a larger maxLength.');

@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cubieToFacelets, identity, applyMoves, parseMoves, Cubie, SOLVED_FACELETS } from '../src/lib/cube/cubie';
 import { solveForMethod, solveBeginner, solveCfop } from '../src/lib/method';
+import { parseFacelets } from '../src/lib/cube';
+const parseCubie = (f: string) => { const p = parseFacelets(f); if (!p.ok) throw new Error('bad'); return p.cubie; };
 import type { Plan } from '../src/lib/method';
 import * as A from '../src/lib/method/algs';
 import { Sim, rng, randomScramble, randomCubie } from './sim';
@@ -181,6 +183,28 @@ test('Beginner method handles easy scrambles and already-finished stages', () =>
     const r = solveForMethod(f, 'beginner');
     assert.ok(r.ok);
     if (r.ok) assert.ok(new Sim(f).apply(r.moves.join(' ')).isSolved(), sc);
+    // the full method itself (not the quick-fix shortcut) must also cope with nearly finished cubes
+    const full = solveBeginner(parseCubie(f));
+    assert.ok(new Sim(f).apply(full.moves.join(' ')).isSolved(), `full ${sc}`);
+  }
+});
+
+test('a cube a few turns from solved gets a short fix, not the whole method', () => {
+  for (const method of ['beginner', 'cfop'] as const) {
+    for (const sc of ['R', "U'", 'F2', "R U R' U'", "L' D2 B"]) {
+      const f = new Sim().apply(sc).facelets();
+      const r = solveForMethod(f, method);
+      assert.ok(r.ok && r.length <= 8 && r.length >= 1, `${method} ${sc}`);
+      if (!r.ok) continue;
+      assert.equal(r.stages.length, 1);
+      assert.equal(r.stages[0].key, 'quick');
+      assert.ok(new Sim(f).apply(r.moves.join(' ')).isSolved());
+    }
+    // and with another first-layer color the real moves still solve it
+    const f = new Sim().apply("R U R' U'").facelets();
+    const r = solveForMethod(f, method, { bottom: 'U' });
+    assert.ok(r.ok && r.actualMoves.length <= 8);
+    if (r.ok) assert.ok(new Sim(f).apply(r.actualMoves.join(' ')).isSolved());
   }
 });
 

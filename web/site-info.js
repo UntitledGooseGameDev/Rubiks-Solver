@@ -3,9 +3,22 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.7',
+  version: '2.8',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.8',
+      date: '2026-10-16',
+      title: 'Short fixes for nearly solved cubes',
+      sections: [
+        {
+          heading: 'Fixed',
+          items: [
+            'Beginner and CFOP no longer rebuild a whole cube that is only a few turns from solved. If 8 moves or fewer solve it, you get just those moves, for example one turn for a cube scrambled with a single R.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.7',
       date: '2026-10-16',

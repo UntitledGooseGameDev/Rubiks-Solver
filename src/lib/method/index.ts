@@ -1,4 +1,5 @@
-import { parseFacelets, solveFacelets, CubeError } from '../cube';
+import { parseFacelets, solveFacelets, solveCubieDetailed, CubeError } from '../cube';
+import { Cubie, MOVE_NAMES } from '../cube/cubie';
 import { Face, FRAME_FACES, frameMoveToActual, frameTokens, toFrameFacelets } from './frame';
 import { Plan, MethodId, Stage, Step } from './plan';
 import { solveBeginner, BEGINNER_STAGES } from './beginner';
@@ -30,6 +31,34 @@ const FAST_STAGES: Stage[] = [
  *   'beginner' layer by layer with named algorithms
  *   'cfop'     Cross, F2L, OLL (two-look), PLL
  */
+/** At most this many moves from solved: skip the method and just show the short fix. */
+export const QUICK_FIX_MAX = 8;
+
+/** The moves of a solution of at most QUICK_FIX_MAX turns, or null if there is none (or the cube is solved). */
+function shortSolution(cubie: Cubie): string[] | null {
+  if (cubie.cp.every((v, i) => v === i) && cubie.co.every((v) => v === 0) && cubie.ep.every((v, i) => v === i) && cubie.eo.every((v) => v === 0)) return null;
+  try {
+    const r = solveCubieDetailed(cubie, { maxLength: QUICK_FIX_MAX, timeoutMs: 50, giveUpMs: 80 });
+    return r.moves.map((m) => MOVE_NAMES[m]);
+  } catch {
+    return null; // nothing that short exists
+  }
+}
+
+function quickFixPlan(method: MethodId, moves: string[]): Plan {
+  const n = moves.length;
+  const ident: Record<string, string> = { U: 'U', R: 'R', F: 'F', D: 'D', L: 'L', B: 'B' };
+  return {
+    method,
+    stages: [{ key: 'quick', title: 'Quick fix', blurb: `This cube is only ${n} ${n === 1 ? 'turn' : 'turns'} from solved, so the full method would be overkill. Just do ${n === 1 ? 'this move' : 'these moves'}.` }],
+    steps: [{ stage: 'quick', title: n === 1 ? 'Undo the one turn' : `Undo the last ${n} turns`, kind: 'free', moves }],
+    moves,
+    length: n,
+    actualMoves: moves,
+    frame: { bottom: 'D', map: ident },
+  };
+}
+
 export function solveForMethod(input: string, method: SolveMethod, opts: { bottom?: Face } = {}): MethodResult {
   const parsed = parseFacelets(input);
   if (!parsed.ok) return parsed;
@@ -40,7 +69,11 @@ export function solveForMethod(input: string, method: SolveMethod, opts: { botto
       // Hold the cube so the chosen face is at the bottom, solve that, then translate back.
       const framed = bottom === 'D' ? parsed : parseFacelets(toFrameFacelets(parsed.facelets, bottom));
       if (!framed.ok) return framed;
-      const plan = method === 'beginner' ? solveBeginner(framed.cubie) : solveCfop(framed.cubie);
+      // A cube that is only a few turns from solved does not need the whole method.
+      const quick = shortSolution(framed.cubie);
+      const plan: Plan = quick
+        ? quickFixPlan(method, quick)
+        : method === 'beginner' ? solveBeginner(framed.cubie) : solveCfop(framed.cubie);
       if (bottom === 'D') return { ok: true, ms: now() - t0, ...plan };
       const retoken = (t: string) => frameTokens(t, bottom);
       return {

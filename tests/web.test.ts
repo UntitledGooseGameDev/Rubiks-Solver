@@ -63,7 +63,7 @@ test('version number: the page, the update log and package.json agree', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   assert.equal(`${Site.version}.0`, pkg.version, 'package.json version should be the site version plus .0');
   assert.equal(Site.changelog[0].version, Site.version, 'the newest update-log entry is the current version');
-  assert.equal(Site.version, '2.7');
+  assert.equal(Site.version, '2.8');
 });
 
 test('update log: every release has a date, a title and non-empty sections, newest first', () => {

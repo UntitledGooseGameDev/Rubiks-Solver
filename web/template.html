@@ -1039,7 +1039,7 @@
     var tools = el('div', 'plan-tools');
     var note = el('p', 'plan-note');
     var fm = (plan.frame && plan.frame.map) || FRAME.D;
-    richText(note, plan.method === 'fast'
+    richText(note, plan.method === 'fast' || (plan.stages[0] && plan.stages[0].key === 'quick')
       ? 'Click any move to jump to it.'
       : 'Keep the cube like the 3D view: [' + fm.U + '] on top, [' + fm.F + '] facing you. We build the [' + fm.D + '] layer first and finish on top. Moves like R and U mean the right and top of the cube as you hold it.');
     var toggle = el('button', 'linkbtn', 'Show all moves');
