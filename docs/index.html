@@ -313,6 +313,8 @@
   .lb-controls label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--dim); font-size: 14px; }
   .lb-controls select { font: 500 15px/1 var(--body); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 42px; }
   .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 220px; }
+  .lb-details { margin-top: 8px; font-size: 12px; font-weight: 400; }
+  .lb-details pre { white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; font: 12px/1.4 var(--mono); color: var(--dim); }
   .lb-wrap { overflow-x: auto; }
   table.lb { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.lb[hidden] { display: none; }
@@ -1358,9 +1360,14 @@ const SiteInfo = {
 const WcaBoard = (function () {
   'use strict';
 
+  // Where the static files might live. Each is tried in turn, and every failure is reported,
+  // because the exact hosting layout could not be checked when this was written.
   var BASES = [
     'https://wca-rest-api.robiningelbrecht.be/api/',
+    'https://wca-rest-api.robiningelbrecht.be/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/api/api/',
     'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api/',
+    'https://cdn.jsdelivr.net/gh/robiningelbrecht/wca-rest-api@api/api/',
   ];
 
   var EVENTS = [
@@ -1424,15 +1431,27 @@ const WcaBoard = (function () {
       return r.json();
     });
   }
+  /** Every address that failed, with the reason, for the page's "details" line. */
+  var lastFailures = [];
 
   /** Try each data source in turn. */
   function fetchFirst(path, signal) {
-    var errors = [];
+    var failures = [];
     return BASES.reduce(function (p, base) {
-      return p.catch(function () { return getJSON(base + path, signal); });
+      return p.catch(function (e) {
+        if (e && e.name === 'AbortError') throw e;
+        return getJSON(base + path, signal).catch(function (err) {
+          if (err && err.name === 'AbortError') throw err;
+          failures.push(base + path + ' → ' + (err && err.message || 'network error'));
+          throw err;
+        });
+      });
     }, Promise.reject(new Error('start'))).catch(function (e) {
       if (e && e.name === 'AbortError') throw e;
-      throw new Error('Could not load the WCA data (' + (e && e.message || 'network error') + ').');
+      lastFailures = failures;
+      var err = new Error('Could not find the WCA data files (tried ' + failures.length + ' addresses).');
+      err.details = failures;
+      throw err;
     });
   }
 
@@ -2113,6 +2132,12 @@ const WcaBoard = (function () {
       lbLoaded = '';
       st.className = 'status bad';
       st.textContent = (err && err.message ? err.message : 'Could not load the rankings.') + ' You can still see the official list at worldcubeassociation.org/results/rankings.';
+      if (err && err.details && err.details.length) {
+        var dt = document.createElement('details'); dt.className = 'lb-details';
+        dt.appendChild(el('summary', '', 'Technical details (for a bug report)'));
+        var pre = el('pre', '', err.details.join('\n'));
+        dt.appendChild(pre); st.appendChild(dt);
+      }
     });
   }
   syncBoardControls();

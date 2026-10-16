@@ -313,6 +313,8 @@
   .lb-controls label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--dim); font-size: 14px; }
   .lb-controls select { font: 500 15px/1 var(--body); color: var(--fg); background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 42px; }
   .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 220px; }
+  .lb-details { margin-top: 8px; font-size: 12px; font-weight: 400; }
+  .lb-details pre { white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; font: 12px/1.4 var(--mono); color: var(--dim); }
   .lb-wrap { overflow-x: auto; }
   table.lb { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.lb[hidden] { display: none; }
@@ -1288,6 +1290,12 @@
       lbLoaded = '';
       st.className = 'status bad';
       st.textContent = (err && err.message ? err.message : 'Could not load the rankings.') + ' You can still see the official list at worldcubeassociation.org/results/rankings.';
+      if (err && err.details && err.details.length) {
+        var dt = document.createElement('details'); dt.className = 'lb-details';
+        dt.appendChild(el('summary', '', 'Technical details (for a bug report)'));
+        var pre = el('pre', '', err.details.join('\n'));
+        dt.appendChild(pre); st.appendChild(dt);
+      }
     });
   }
   syncBoardControls();

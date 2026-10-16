@@ -11,9 +11,14 @@
 const WcaBoard = (function () {
   'use strict';
 
+  // Where the static files might live. Each is tried in turn, and every failure is reported,
+  // because the exact hosting layout could not be checked when this was written.
   var BASES = [
     'https://wca-rest-api.robiningelbrecht.be/api/',
+    'https://wca-rest-api.robiningelbrecht.be/',
+    'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/api/api/',
     'https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api/',
+    'https://cdn.jsdelivr.net/gh/robiningelbrecht/wca-rest-api@api/api/',
   ];
 
   var EVENTS = [
@@ -77,15 +82,27 @@ const WcaBoard = (function () {
       return r.json();
     });
   }
+  /** Every address that failed, with the reason, for the page's "details" line. */
+  var lastFailures = [];
 
   /** Try each data source in turn. */
   function fetchFirst(path, signal) {
-    var errors = [];
+    var failures = [];
     return BASES.reduce(function (p, base) {
-      return p.catch(function () { return getJSON(base + path, signal); });
+      return p.catch(function (e) {
+        if (e && e.name === 'AbortError') throw e;
+        return getJSON(base + path, signal).catch(function (err) {
+          if (err && err.name === 'AbortError') throw err;
+          failures.push(base + path + ' → ' + (err && err.message || 'network error'));
+          throw err;
+        });
+      });
     }, Promise.reject(new Error('start'))).catch(function (e) {
       if (e && e.name === 'AbortError') throw e;
-      throw new Error('Could not load the WCA data (' + (e && e.message || 'network error') + ').');
+      lastFailures = failures;
+      var err = new Error('Could not find the WCA data files (tried ' + failures.length + ' addresses).');
+      err.details = failures;
+      throw err;
     });
   }
 
