@@ -5,7 +5,7 @@
 
 A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript. It takes the 54 sticker colors of a cube, validates that the cube is physically possible, and returns a move sequence that solves it, typically 19–23 moves.
 
-It comes with a browser page (v2.5) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The **WCA Top 100** page shows the world's fastest official results, loaded in the browser. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
+It comes with a browser page (v2.6) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The **WCA Top 100** page shows the world's fastest official results, loaded in the browser. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
 
 ## Just want to use it?
 
@@ -19,7 +19,7 @@ Node is only needed to run the tests, use the command-line solver, or rebuild th
 
 ```bash
 npm install
-npm test            # 60 tests, about 4 minutes
+npm test            # 62 tests, about 4 minutes
 npm run solve -- --scramble "R U R' U' F2 D L'"
 npm run solve -- --random
 npm run solve -- --facelets <54 stickers>
@@ -104,7 +104,7 @@ CFOP does OLL in two looks; the 57 single-look OLL algorithms are not included.
 
 ## How it was tested
 
-`npm test` runs 60 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
+`npm test` runs 62 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
 
 - all 18 moves and 300 random 40-move scrambles produce the same stickers in the solver's model as in the simulator,
 - every solution the solver returns actually solves the cube when replayed on the simulator, for single moves, all 324 two-move scrambles, 200 random scrambles, 200 uniformly random legal cube states (not built from scrambles), and the superflip,
@@ -112,7 +112,7 @@ CFOP does OLL in two looks; the 57 single-look OLL algorithms are not included.
 
 The method tests (`tests/method.test.ts`) check, on the same simulator, that every named algorithm does what it should (the 21 PLL algorithms are distinct and cover all 288 last-layer cases), and that both methods solve 150 uniformly random legal cubes with each stage (cross, bottom layer, first two layers, top cross, and so on) actually finished at the end of that stage. A separate 4,000-cube run produced no failures.
 
-Results from the last run: all 60 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
+Results from the last run: all 62 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
 
 ## Web page
 

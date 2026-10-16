@@ -308,6 +308,12 @@
   .tok i { display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; background: var(--c); margin-right: 0.3em; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); vertical-align: -0.02em; }
 
   /* ---------- text pages ---------- */
+  .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 8px 0 18px; }
+  .lv-card { display: block; text-decoration: none; color: var(--fg); background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .lv-card:hover { border-color: var(--accent); }
+  .lv-card b { display: block; font: 700 1rem/1.3 var(--display); margin-bottom: 6px; }
+  .lv-card span { display: block; color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .lv-badge { display: inline-block !important; font: 700 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink) !important; background: var(--accent); border-radius: 999px; padding: 4px 8px; margin: 0 0 8px !important; }
   kbd { font: 600 0.85em/1 var(--mono); background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
   .tm-scramble { font: 600 clamp(1rem, 2.6vw, 1.35rem)/1.6 var(--mono); letter-spacing: 0.04em; background: var(--sunken); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 0 0 12px; word-spacing: 0.35em; }
   .tm-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 0 0 12px; }
@@ -387,6 +393,7 @@
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
         <a href="#/" data-route="solver">Solver</a>
+        <a href="#/live" data-route="live">Live</a>
         <a href="#/timer" data-route="timer">Timer</a>
         <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
         <a href="#/troubleshooting" data-route="troubleshooting">Troubleshooting</a>
@@ -499,6 +506,21 @@
         <p class="note" id="planNote"></p>
       </section>
     </aside>
+  </main>
+
+  <main class="doc wide" id="view-live" hidden>
+    <h2>Live competitions</h2>
+    <p class="lede">Official WCA competitions that are on right now, and ones starting in the next few days. Open one to see its schedule and results on the WCA website.</p>
+    <div class="tm-actions">
+      <button class="btn" id="lvRefresh" type="button">Refresh</button>
+      <a class="linkbtn" href="https://live.worldcubeassociation.org/" target="_blank" rel="noopener">Open WCA Live</a>
+    </div>
+    <p class="status" id="lvStatus" role="status"></p>
+    <h3 id="lvNowHead" hidden>On now</h3>
+    <div class="lv-grid" id="lvNow"></div>
+    <h3 id="lvSoonHead" hidden>Starting soon</h3>
+    <div class="lv-grid" id="lvSoon"></div>
+    <p class="note">From the WCA&rsquo;s own competition list. Not affiliated with the WCA. Dates are the competition&rsquo;s local dates, compared with your computer&rsquo;s date, so a competition far from you can show up a little early or late.</p>
   </main>
 
   <main class="doc wide" id="view-timer" hidden>
@@ -1254,9 +1276,28 @@ const CubeLogic = (() => {
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.5',
+  version: '2.6',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.6',
+      date: '2026-10-16',
+      title: 'Live competitions',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Live page: WCA competitions that are on today and ones starting in the next 3 days, with flag, place, dates and a link to the competition on the WCA website. Loaded from the WCA’s own competition list.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'This shows which competitions are running, not live results. Each card opens the competition on worldcubeassociation.org, and there is a link to WCA Live.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.5',
       date: '2026-10-16',
@@ -1635,6 +1676,97 @@ const TimerLogic = (function () {
 
   return { scramble: scramble, effective: effective, format: format, formatSolve: formatSolve,
     averageOf: averageOf, bestAverageOf: bestAverageOf, mean: mean, best: best, inspectionPenalty: inspectionPenalty };
+})();
+
+
+</script>
+<script>
+/**
+ * Live competitions: which WCA competitions are on right now (or about to start).
+ * Uses the official WCA API (https://www.worldcubeassociation.org/api/v0/competitions),
+ * which is not officially supported, so every field is read defensively.
+ */
+const LiveComps = (function () {
+  'use strict';
+
+  var API = 'https://www.worldcubeassociation.org/api/v0/competitions';
+  var MAX_PAGES = 20, PER_PAGE = 25;
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  /** yyyy-mm-dd for a Date, in the viewer's local time. */
+  function dateStr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function addDays(str, n) {
+    var p = str.split('-'); var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  }
+  var isDate = function (s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); };
+
+  /** Read one competition; null if it has no usable id, name or dates. */
+  function readComp(c) {
+    if (!c || typeof c !== 'object' || !c.id || !c.name || !isDate(c.start_date) || !isDate(c.end_date)) return null;
+    return {
+      id: String(c.id), name: String(c.name), city: String(c.city || ''), country: String(c.country_iso2 || ''),
+      start: c.start_date, end: c.end_date,
+      events: Array.isArray(c.event_ids) ? c.event_ids.length : 0,
+      limit: typeof c.competitor_limit === 'number' ? c.competitor_limit : null,
+      url: typeof c.url === 'string' && /^https:\/\/www\.worldcubeassociation\.org\//.test(c.url) ? c.url : 'https://www.worldcubeassociation.org/competitions/' + encodeURIComponent(String(c.id)),
+    };
+  }
+
+  /** 'now' = on today, 'soon' = starts within `soonDays` days, else null. */
+  function classify(c, today, soonDays) {
+    if (c.start <= today && today <= c.end) return 'now';
+    if (c.start > today && c.start <= addDays(today, soonDays)) return 'soon';
+    return null;
+  }
+
+  /** Split raw API rows into { now, soon }, de-duplicated, sorted by start date then name. */
+  function sort(rows, today, soonDays) {
+    var seen = {}, now = [], soon = [];
+    (rows || []).forEach(function (r) {
+      var c = readComp(r);
+      if (!c || seen[c.id]) return;
+      seen[c.id] = 1;
+      var k = classify(c, today, soonDays);
+      if (k === 'now') now.push(c); else if (k === 'soon') soon.push(c);
+    });
+    var by = function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : a.name < b.name ? -1 : a.name > b.name ? 1 : 0; };
+    return { now: now.sort(by), soon: soon.sort(by) };
+  }
+
+  function getPage(from, to, page, signal) {
+    var url = API + '?start=' + from + '&end=' + to + '&page=' + page;
+    return fetch(url, { signal: signal, cache: 'no-cache', headers: { Accept: 'application/json' } }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  /** Fetch every competition that starts in the window and sort out which are on. */
+  function load(today, soonDays, signal) {
+    // A competition lasts at most about a week, so one that is on today started within the last week.
+    var from = addDays(today, -7), to = addDays(today, 7 + soonDays);
+    var rows = [], page = 1, done = false;
+    function batch() {
+      if (done || page > MAX_PAGES) return Promise.resolve();
+      var pages = []; for (var i = 0; i < 4 && page + i <= MAX_PAGES; i++) pages.push(page + i);
+      page += pages.length;
+      return Promise.all(pages.map(function (p) { return getPage(from, to, p, signal); })).then(function (res) {
+        res.forEach(function (list) {
+          if (!Array.isArray(list)) throw new Error('unexpected reply');
+          rows = rows.concat(list);
+          if (list.length < PER_PAGE) done = true;
+        });
+        return batch();
+      });
+    }
+    return batch().then(function () { return sort(rows, today, soonDays); }, function (e) {
+      if (e && e.name === 'AbortError') throw e;
+      throw new Error('Could not load the competition list from the WCA (' + (e && e.message || 'network error') + ').');
+    });
+  }
+
+  return { dateStr: dateStr, addDays: addDays, readComp: readComp, classify: classify, sort: sort, load: load };
 })();
 
 
@@ -2234,6 +2366,49 @@ const TimerLogic = (function () {
     if (moves.length) { gotoStep(0); solve(); }
   });
 
+  // ---- Live competitions ----
+  var lvToken = 0, lvCtl = null, lvAt = 0;
+  function lvCard(c, tag) {
+    var a = document.createElement('a');
+    a.className = 'lv-card'; a.href = c.url; a.target = '_blank'; a.rel = 'noopener';
+    a.appendChild(el('span', 'lv-badge', tag));
+    a.appendChild(el('b', '', c.name));
+    var where = el('span'); addFlag(where, c.country); where.appendChild(document.createTextNode(c.city ? ' · ' + c.city : '')); a.appendChild(where);
+    a.appendChild(el('span', '', c.start === c.end ? c.start : c.start + ' to ' + c.end));
+    var bits = []; if (c.events) bits.push(c.events + (c.events === 1 ? ' event' : ' events')); if (c.limit) bits.push('limit ' + c.limit + ' competitors');
+    if (bits.length) a.appendChild(el('span', '', bits.join(' · ')));
+    return a;
+  }
+  function loadLive(force) {
+    if (!force && Date.now() - lvAt < 120000) return; // reuse results for two minutes
+    var token = ++lvToken;
+    if (lvCtl && lvCtl.abort) lvCtl.abort();
+    lvCtl = window.AbortController ? new AbortController() : null;
+    var st = $('lvStatus');
+    st.className = 'status'; st.innerHTML = '';
+    var sp = document.createElement('span'); sp.className = 'spin'; st.appendChild(sp);
+    st.appendChild(document.createTextNode('Looking for competitions…'));
+    var today = LiveComps.dateStr(new Date());
+    LiveComps.load(today, 3, lvCtl && lvCtl.signal).then(function (r) {
+      if (token !== lvToken) return;
+      lvAt = Date.now();
+      ['Now', 'Soon'].forEach(function (k) {
+        var list = k === 'Now' ? r.now : r.soon, grid = $('lv' + k);
+        grid.innerHTML = '';
+        list.forEach(function (c) { grid.appendChild(lvCard(c, k === 'Now' ? 'On now' : 'Starts ' + c.start)); });
+        $('lv' + k + 'Head').hidden = !list.length;
+      });
+      st.innerHTML = '';
+      st.textContent = r.now.length + (r.now.length === 1 ? ' competition is' : ' competitions are') + ' on today (' + today + ')' + (r.soon.length ? ', and ' + r.soon.length + (r.soon.length === 1 ? ' starts' : ' start') + ' in the next 3 days.' : '.');
+    }, function (err) {
+      if (token !== lvToken || (err && err.name === 'AbortError')) return;
+      lvAt = 0;
+      st.className = 'status bad';
+      st.textContent = (err && err.message ? err.message : 'Could not load competitions.') + ' You can still see them at worldcubeassociation.org/competitions.';
+    });
+  }
+  $('lvRefresh').addEventListener('click', function () { loadLive(true); });
+
   // ---- Timer ----
   var TM = TimerLogic;
   var tmSolves = [], tmState = 'idle', tmHoldAt = 0, tmStart = 0, tmRaf = 0, tmInspectAt = 0, tmInspectPen = 0, tmHoldTimer = 0, tmOpen = false;
@@ -2433,11 +2608,11 @@ const TimerLogic = (function () {
   syncBoardControls();
 
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var PAGES = { '': 'solver', '/': 'solver', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var PAGES = { '': 'solver', '/': 'solver', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
@@ -2445,6 +2620,7 @@ const TimerLogic = (function () {
     if (name !== 'solver') pause();
     if (name === 'leaderboard') loadBoard();
     timerPageOpen(name === 'timer');
+    if (name === 'live') loadLive();
     window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);

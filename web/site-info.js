@@ -3,9 +3,28 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.5',
+  version: '2.6',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.6',
+      date: '2026-10-16',
+      title: 'Live competitions',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            'Live page: WCA competitions that are on today and ones starting in the next 3 days, with flag, place, dates and a link to the competition on the WCA website. Loaded from the WCA’s own competition list.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'This shows which competitions are running, not live results. Each card opens the competition on worldcubeassociation.org, and there is a link to WCA Live.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.5',
       date: '2026-10-16',

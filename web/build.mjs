@@ -28,13 +28,17 @@ wca = wca.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 let timer = readFileSync(join(root, 'web/timer.js'), 'utf8');
 timer = timer.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 
+let live = readFileSync(join(root, 'web/live.js'), 'utf8');
+live = live.replace(/\nif \(typeof module[\s\S]*$/, '\n');
+
 const page = readFileSync(join(root, 'web/template.html'), 'utf8')
   .replace('/*__BUNDLE__*/', () => bundle)
   .replace('/*__LOGIC__*/', () => logic)
   .replace('/*__SCANUI__*/', () => readFileSync(join(root, 'web/scan-ui.js'), 'utf8'))
   .replace('/*__SITEINFO__*/', () => site)
   .replace('/*__WCA__*/', () => wca)
-  .replace('/*__TIMER__*/', () => timer);
+  .replace('/*__TIMER__*/', () => timer)
+  .replace('/*__LIVE__*/', () => live);
 
 writeFileSync(join(root, 'web/index.html'), page);
 // GitHub Pages serves the docs/ folder, so keep a copy there.
