@@ -134,6 +134,8 @@
     margin: 0 auto;
   }
   .face { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+  .face.two { gap: 3px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .net.two { max-width: 360px; }
   .face[data-f="U"] { grid-column: 2; grid-row: 1; }
   .face[data-f="L"] { grid-column: 1; grid-row: 2; }
   .face[data-f="F"] { grid-column: 2; grid-row: 2; }
@@ -393,6 +395,7 @@
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
         <a href="#/" data-route="solver">Solver</a>
+        <a href="#/2x2" data-route="two">2×2</a>
         <a href="#/live" data-route="live">Live</a>
         <a href="#/timer" data-route="timer">Timer</a>
         <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
@@ -505,6 +508,62 @@
         <p class="status" id="solveStatus" role="status"></p>
         <div class="plan" id="plan" aria-label="Solution steps"></div>
         <p class="note" id="planNote"></p>
+      </section>
+    </aside>
+  </main>
+
+  <main class="layout" id="view-two" hidden>
+    <section class="stage-col" aria-label="3D 2×2 cube">
+      <div class="stage" id="stage2" aria-label="Interactive 3D 2×2 cube. Drag to rotate.">
+        <div class="scene"><div class="cube" id="cube2"></div></div>
+        <span class="hint">Drag to rotate</span>
+        <span class="hint hint-r" id="t2Label"></span>
+      </div>
+      <div class="transport" aria-label="Playback controls">
+        <div class="tbtns">
+          <button class="icon-btn" id="t2Restart" title="Back to the start" aria-label="Back to the start"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="icon-btn" id="t2Back" title="Previous move" aria-label="Previous move"><svg viewBox="0 0 24 24"><path d="M15 5v14L6 12z"/></svg></button>
+          <button class="icon-btn primary" id="t2Play" title="Play" aria-label="Play"><svg viewBox="0 0 24 24" id="t2PlayIcon"><path d="M8 5v14l11-7z"/></svg></button>
+          <button class="icon-btn" id="t2Next" title="Next move" aria-label="Next move"><svg viewBox="0 0 24 24"><path d="M9 5v14l9-7z"/></svg></button>
+        </div>
+        <div class="speed">
+          <label for="t2Speed">Speed</label>
+          <input type="range" id="t2Speed" min="0.25" max="3" step="0.25" value="1">
+          <output id="t2SpeedOut" for="t2Speed">1.0×</output>
+        </div>
+        <div class="progress" id="t2Progress" aria-live="polite"></div>
+      </div>
+    </section>
+    <aside class="panel">
+      <section class="block" aria-labelledby="h-two">
+        <h2 id="h-two">2×2 cube</h2>
+        <div class="net two" id="net2" role="group" aria-label="2×2 sticker net. Pick a color below, then click stickers to paint."></div>
+        <div class="palette" id="palette2" role="radiogroup" aria-label="Paint color"></div>
+        <p class="palette-note">Pick a color, then click any sticker. There are no centers on a 2×2, so every sticker can be painted. Each color must appear 4 times.</p>
+        <p class="validity" id="t2Valid" role="status"><i></i><span></span></p>
+        <div class="tools">
+          <div class="row">
+            <button class="btn" id="t2Scramble">Scramble</button>
+            <button class="btn" id="t2Reset">Reset to solved</button>
+          </div>
+          <p class="scramble-line" id="t2ScrambleLine"></p>
+          <form class="alg" id="t2AlgForm">
+            <label for="t2AlgInput">Apply your own moves</label>
+            <div class="row">
+              <input type="text" id="t2AlgInput" placeholder="R U R' U' F2" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button class="btn" type="submit">Apply</button>
+            </div>
+            <p class="msg" id="t2AlgMsg"></p>
+          </form>
+        </div>
+      </section>
+      <section class="block" aria-labelledby="h-two-sol">
+        <h2 id="h-two-sol">Solution</h2>
+        <p class="method-desc">The shortest possible solution, found by checking every one of the 3.7 million positions a 2×2 can be in. It is never more than 11 moves. Click a move to jump to it.</p>
+        <button class="btn primary" id="t2Solve">Solve this 2×2</button>
+        <p class="status" id="t2Status" role="status"></p>
+        <div class="plan" id="t2Plan" aria-label="Solution moves"></div>
+        <p class="note">Photo scanning is only for 3×3 cubes. Paint the 2×2 by hand: hold it any way you like and copy the colors.</p>
       </section>
     </aside>
   </main>
@@ -713,6 +772,9 @@
 </script>
 <script>
 /*__LIVE__*/
+</script>
+<script>
+/*__TWO__*/
 </script>
 <script>
 (function () {
@@ -1561,17 +1623,21 @@
   }
   syncBoardControls();
 
+  var two = TwoUI.init({ colors: COLOR, names: NAMES, solver: CubeSolver });
+
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var PAGES = { '': 'solver', '/': 'solver', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var PAGES = { '': 'solver', '/': 'solver', '/2x2': 'two', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { two: '2×2 solver · Two-Phase Cube Solver', live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'two', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     document.title = PAGE_TITLE[name];
     if (name !== 'solver') pause();
+    if (name !== 'two') two.pause();
+    else two.layout();
     if (name === 'leaderboard') loadBoard();
     timerPageOpen(name === 'timer');
     if (name === 'live') loadLive();

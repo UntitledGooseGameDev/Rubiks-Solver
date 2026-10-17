@@ -145,7 +145,7 @@ export function applyMoves(c: Cubie, moves: number[]): Cubie {
 const U = 0, R = 1, F = 2, D = 3, L = 4, B = 5;
 
 /** Facelet indices (0..53) of each corner slot, in clockwise order starting at the U/D sticker. */
-const CORNER_FACELET: number[][] = [
+export const CORNER_FACELET: number[][] = [
   [8, 9, 20],   // URF: U9 R1 F3
   [6, 18, 38],  // UFL: U7 F1 L3
   [0, 36, 47],  // ULB: U1 L1 B3

@@ -3,9 +3,29 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.8',
+  version: '2.9',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '2.9',
+      date: '2026-10-16',
+      title: '2×2 solver',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            '2×2 page: paint your 2×2, scramble it, apply your own moves and watch it turn in 3D.',
+            'The solver finds the shortest possible solution (never more than 11 moves) by searching all 3,674,160 positions of a 2×2. Press play to watch it, or click a move to jump to it.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'Photo scanning is for 3×3 cubes only. A 2×2 has no center stickers, so the solver works out which color is which face from the corners. Solutions use U, R and F turns only.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.8',
       date: '2026-10-16',
