@@ -1,0 +1,3 @@
+# The built page is a single file in docs/ (the same folder GitHub Pages serves). Nothing to build on Netlify.
+[build]
+  publish = "docs"
