@@ -242,6 +242,16 @@
   .scan-status { margin-top: 12px; }
 
   /* ---------- header, nav, pages ---------- */
+  .cubepick { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+  .cubepick label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .cubepick select {
+    font: 700 15px/1 var(--body); color: var(--fg); background: var(--raised);
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 36px 10px 14px; min-height: 42px; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%), linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+    background-position: calc(100% - 19px) 50%, calc(100% - 13px) 50%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat;
+  }
+  .cubepick select:hover { border-color: var(--accent); }
   .titlebar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; }
   .ver {
     display: inline-block; margin-left: 10px; padding: 5px 10px; border-radius: 999px;
@@ -391,11 +401,17 @@
 
 <div class="wrap">
   <header>
+    <div class="cubepick">
+      <label for="cubeSelect">Cube</label>
+      <select id="cubeSelect" aria-label="Choose a cube to solve">
+        <option value="" hidden>Choose a cube…</option>
+        <option value="#/">3×3×3</option>
+        <option value="#/2x2">2×2×2</option>
+      </select>
+    </div>
     <div class="titlebar">
       <h1>Two-Phase Cube Solver <span class="ver" id="ver" title="Version">v2.0</span></h1>
       <nav class="nav" aria-label="Pages">
-        <a href="#/" data-route="solver">Solver</a>
-        <a href="#/2x2" data-route="two">2×2</a>
         <a href="#/live" data-route="live">Live</a>
         <a href="#/timer" data-route="timer">Timer</a>
         <a href="#/leaderboard" data-route="leaderboard">WCA Top 100</a>
@@ -1347,9 +1363,22 @@ const CubeLogic = (() => {
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.9',
+  version: '3.0',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '3.0',
+      date: '2026-10-18',
+      title: 'Cube menu',
+      sections: [
+        {
+          heading: 'Changed',
+          items: [
+            'Choose which cube to solve (3×3×3, 2×2×2 and more to come) from the menu above the title, instead of a tab for each cube. The tabs now hold only Live, Timer, WCA Top 100, Troubleshooting and Update log.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.9',
       date: '2026-10-16',
@@ -3057,11 +3086,13 @@ const TwoUI = (function () {
   var two = TwoUI.init({ colors: COLOR, names: NAMES, solver: CubeSolver });
 
   // ---- pages: Solver / Troubleshooting / Update log ----
+  var CUBE_HASH = { solver: '#/', two: '#/2x2' }; // the cube pages, for the dropdown above the title
   var PAGES = { '': 'solver', '/': 'solver', '/2x2': 'two', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
   var PAGE_TITLE = { two: '2×2 solver · Two-Phase Cube Solver', live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
     ['solver', 'two', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    $('cubeSelect').value = CUBE_HASH[name] || '';
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
@@ -3074,6 +3105,7 @@ const TwoUI = (function () {
     if (name === 'live') loadLive();
     window.scrollTo(0, 0);
   }
+  $('cubeSelect').addEventListener('change', function () { if (this.value) location.hash = this.value; });
   window.addEventListener('hashchange', route);
 
   function formatDate(iso) {

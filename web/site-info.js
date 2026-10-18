@@ -3,9 +3,22 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '2.9',
+  version: '3.0',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '3.0',
+      date: '2026-10-18',
+      title: 'Cube menu',
+      sections: [
+        {
+          heading: 'Changed',
+          items: [
+            'Choose which cube to solve (3×3×3, 2×2×2 and more to come) from the menu above the title, instead of a tab for each cube. The tabs now hold only Live, Timer, WCA Top 100, Troubleshooting and Update log.',
+          ],
+        },
+      ],
+    },
     {
       version: '2.9',
       date: '2026-10-16',
