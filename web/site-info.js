@@ -3,9 +3,22 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '3.2',
+  version: '3.3',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '3.3',
+      date: '2026-10-18',
+      title: 'New logo',
+      sections: [
+        {
+          heading: 'Added',
+          items: [
+            'A CubeWise logo in the page header and as the browser tab icon.',
+          ],
+        },
+      ],
+    },
     {
       version: '3.2',
       date: '2026-10-18',
