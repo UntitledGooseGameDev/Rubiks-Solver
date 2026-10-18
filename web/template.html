@@ -136,6 +136,9 @@
   .face { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
   .face.two { gap: 3px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .net.two { max-width: 360px; }
+  .face.four { gap: 2px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .net.four { max-width: 520px; gap: 10px; }
+  .plan h3.phase { font: 700 0.78rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); margin: 16px 0 8px; }
   .face[data-f="U"] { grid-column: 2; grid-row: 1; }
   .face[data-f="L"] { grid-column: 1; grid-row: 2; }
   .face[data-f="F"] { grid-column: 2; grid-row: 2; }
@@ -407,6 +410,7 @@
         <option value="" hidden>Choose a cube…</option>
         <option value="#/">3×3×3</option>
         <option value="#/2x2">2×2×2</option>
+        <option value="#/4x4">4×4×4</option>
       </select>
     </div>
     <div class="titlebar">
@@ -580,6 +584,62 @@
         <p class="status" id="t2Status" role="status"></p>
         <div class="plan" id="t2Plan" aria-label="Solution moves"></div>
         <p class="note">Photo scanning is only for 3×3 cubes. Paint the 2×2 by hand: hold it any way you like and copy the colors.</p>
+      </section>
+    </aside>
+  </main>
+
+  <main class="layout" id="view-four" hidden>
+    <section class="stage-col" aria-label="3D 4×4 cube">
+      <div class="stage" id="stage4" aria-label="Interactive 3D 4×4 cube. Drag to rotate.">
+        <div class="scene"><div class="cube" id="cube4"></div></div>
+        <span class="hint">Drag to rotate</span>
+        <span class="hint hint-r" id="t4Label"></span>
+      </div>
+      <div class="transport" aria-label="Playback controls">
+        <div class="tbtns">
+          <button class="icon-btn" id="t4Restart" title="Back to the start" aria-label="Back to the start"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="icon-btn" id="t4Back" title="Previous move" aria-label="Previous move"><svg viewBox="0 0 24 24"><path d="M15 5v14L6 12z"/></svg></button>
+          <button class="icon-btn primary" id="t4Play" title="Play" aria-label="Play"><svg viewBox="0 0 24 24" id="t4PlayIcon"><path d="M8 5v14l11-7z"/></svg></button>
+          <button class="icon-btn" id="t4Next" title="Next move" aria-label="Next move"><svg viewBox="0 0 24 24"><path d="M9 5v14l9-7z"/></svg></button>
+        </div>
+        <div class="speed">
+          <label for="t4Speed">Speed</label>
+          <input type="range" id="t4Speed" min="0.25" max="3" step="0.25" value="1">
+          <output id="t4SpeedOut" for="t4Speed">1.0×</output>
+        </div>
+        <div class="progress" id="t4Progress" aria-live="polite"></div>
+      </div>
+    </section>
+    <aside class="panel">
+      <section class="block" aria-labelledby="h-four">
+        <h2 id="h-four">4×4 cube</h2>
+        <div class="net four" id="net4" role="group" aria-label="4×4 sticker net. Pick a color below, then click stickers to paint."></div>
+        <div class="palette" id="palette4" role="radiogroup" aria-label="Paint color"></div>
+        <p class="palette-note">Pick a color, then click any sticker. A 4×4 has no fixed centers, so every sticker can be painted. Each color must appear 16 times.</p>
+        <p class="validity" id="t4Valid" role="status"><i></i><span></span></p>
+        <div class="tools">
+          <div class="row">
+            <button class="btn" id="t4Scramble">Scramble</button>
+            <button class="btn" id="t4Reset">Reset to solved</button>
+          </div>
+          <p class="scramble-line" id="t4ScrambleLine"></p>
+          <form class="alg" id="t4AlgForm">
+            <label for="t4AlgInput">Apply your own moves</label>
+            <div class="row">
+              <input type="text" id="t4AlgInput" placeholder="R U Rw' 2L F2" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button class="btn" type="submit">Apply</button>
+            </div>
+            <p class="msg" id="t4AlgMsg"></p>
+          </form>
+        </div>
+      </section>
+      <section class="block" aria-labelledby="h-four-sol">
+        <h2 id="h-four-sol">Solution</h2>
+        <p class="method-desc">Solved by reduction: match up the centers, pair the edges into whole edges, then solve it like a 3×3 (the parity cases only a 4×4 has are handled for you). Expect roughly 100 to 130 moves. <b>Rw</b> turns the two right layers together, <b>2R</b> only the layer under the outside one. Click a move to jump to it.</p>
+        <button class="btn primary" id="t4Solve">Solve this 4×4</button>
+        <p class="status" id="t4Status" role="status"></p>
+        <div class="plan" id="t4Plan" aria-label="Solution moves"></div>
+        <p class="note">Photo scanning is only for 3×3 cubes. Paint the 4×4 by hand: hold it any way you like and copy the colors.</p>
       </section>
     </aside>
   </main>
@@ -791,6 +851,7 @@
 </script>
 <script>
 /*__TWO__*/
+/*__FOUR__*/
 </script>
 <script>
 (function () {
@@ -1640,14 +1701,15 @@
   syncBoardControls();
 
   var two = TwoUI.init({ colors: COLOR, names: NAMES, solver: CubeSolver });
+  var four = FourUI.init({ colors: COLOR, names: NAMES, solver: CubeSolver });
 
   // ---- pages: Solver / Troubleshooting / Update log ----
-  var CUBE_HASH = { solver: '#/', two: '#/2x2' }; // the cube pages, for the dropdown above the title
-  var PAGES = { '': 'solver', '/': 'solver', '/2x2': 'two', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
-  var PAGE_TITLE = { two: '2×2 solver · Two-Phase Cube Solver', live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
+  var CUBE_HASH = { solver: '#/', two: '#/2x2', four: '#/4x4' }; // the cube pages, for the dropdown above the title
+  var PAGES = { '': 'solver', '/': 'solver', '/2x2': 'two', '/4x4': 'four', '/live': 'live', '/timer': 'timer', '/leaderboard': 'leaderboard', '/troubleshooting': 'troubleshooting', '/updates': 'updates' };
+  var PAGE_TITLE = { two: '2×2 solver · Two-Phase Cube Solver', four: '4×4 solver · Two-Phase Cube Solver', live: 'Live competitions · Two-Phase Cube Solver', timer: 'Timer · Two-Phase Cube Solver', leaderboard: 'WCA Top 100 · Two-Phase Cube Solver', solver: 'Two-Phase Cube Solver', troubleshooting: 'Troubleshooting · Two-Phase Cube Solver', updates: 'Update log · Two-Phase Cube Solver' };
   function route() {
     var name = PAGES[(location.hash || '').replace(/^#/, '')] || 'solver';
-    ['solver', 'two', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
+    ['solver', 'two', 'four', 'live', 'timer', 'leaderboard', 'troubleshooting', 'updates'].forEach(function (n) { $('view-' + n).hidden = n !== name; });
     $('cubeSelect').value = CUBE_HASH[name] || '';
     Array.prototype.forEach.call(document.querySelectorAll('.nav a'), function (a) {
       if (a.dataset.route === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -1656,6 +1718,8 @@
     if (name !== 'solver') pause();
     if (name !== 'two') two.pause();
     else two.layout();
+    if (name !== 'four') four.pause();
+    else four.layout();
     if (name === 'leaderboard') loadBoard();
     timerPageOpen(name === 'timer');
     if (name === 'live') loadLive();

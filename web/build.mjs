@@ -34,6 +34,9 @@ live = live.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 let two = readFileSync(join(root, 'web/two.js'), 'utf8');
 two = two.replace(/\nif \(typeof module[\s\S]*$/, '\n');
 
+let four = readFileSync(join(root, 'web/four.js'), 'utf8');
+four = four.replace(/\nif \(typeof module[\s\S]*$/, '\n');
+
 const page = readFileSync(join(root, 'web/template.html'), 'utf8')
   .replace('/*__BUNDLE__*/', () => bundle)
   .replace('/*__LOGIC__*/', () => logic)
@@ -42,7 +45,8 @@ const page = readFileSync(join(root, 'web/template.html'), 'utf8')
   .replace('/*__WCA__*/', () => wca)
   .replace('/*__TIMER__*/', () => timer)
   .replace('/*__LIVE__*/', () => live)
-  .replace('/*__TWO__*/', () => two);
+  .replace('/*__TWO__*/', () => two)
+  .replace('/*__FOUR__*/', () => four);
 
 writeFileSync(join(root, 'web/index.html'), page);
 // GitHub Pages serves the docs/ folder, so keep a copy there.

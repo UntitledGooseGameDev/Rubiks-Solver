@@ -5,7 +5,7 @@
 
 A real two-phase (Kociemba-style) Rubik's Cube solver in dependency-free TypeScript. It takes the 54 sticker colors of a cube, validates that the cube is physically possible, and returns a move sequence that solves it, typically 19–23 moves.
 
-It comes with a browser page (v3.0) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The **WCA Top 100** page shows the world's fastest official results, loaded in the browser. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
+It comes with a browser page (v3.1) that reads a cube from six photos, shows it in 3D and animates the solution in the method you pick: Beginner (layer by layer with named algorithms), CFOP, or Fastest (the shortest moves). The **WCA Top 100** page shows the world's fastest official results, loaded in the browser. The solver lives in `src/lib/cube/` and the scanner in `src/lib/scan/`, so they can be dropped into a Next.js app unchanged.
 
 ## Just want to use it?
 
@@ -19,7 +19,7 @@ Node is only needed to run the tests, use the command-line solver, or rebuild th
 
 ```bash
 npm install
-npm test            # 70 tests, about 4 minutes
+npm test            # 81 tests, about 4 minutes
 npm run solve -- --scramble "R U R' U' F2 D L'"
 npm run solve -- --random
 npm run solve -- --facelets <54 stickers>
@@ -104,7 +104,7 @@ CFOP does OLL in two looks; the 57 single-look OLL algorithms are not included.
 
 ## How it was tested
 
-`npm test` runs 70 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
+`npm test` runs 81 tests. The key idea is `tests/sim.ts`, a physical cube simulator that rotates stickers in 3D and shares no tables or conventions with the solver. It checks that:
 
 - all 18 moves and 300 random 40-move scrambles produce the same stickers in the solver's model as in the simulator,
 - every solution the solver returns actually solves the cube when replayed on the simulator, for single moves, all 324 two-move scrambles, 200 random scrambles, 200 uniformly random legal cube states (not built from scrambles), and the superflip,
@@ -112,7 +112,7 @@ CFOP does OLL in two looks; the 57 single-look OLL algorithms are not included.
 
 The method tests (`tests/method.test.ts`) check, on the same simulator, that every named algorithm does what it should (the 21 PLL algorithms are distinct and cover all 288 last-layer cases), and that both methods solve 150 uniformly random legal cubes with each stage (cross, bottom layer, first two layers, top cross, and so on) actually finished at the end of that stage. A separate 4,000-cube run produced no failures.
 
-Results from the last run: all 70 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
+Results from the last run: all 81 tests pass; random states averaged 20.3 moves (max 23); the superflip, whose optimal solution is 20 moves, was solved in 22.
 
 ## Web page
 
@@ -154,6 +154,16 @@ Known limits: the grid is a rotated square, so photos taken at a steep angle may
 ## 2x2 solver
 
 `src/lib/two/` solves a 2x2x2 optimally. Turning U, R and F never moves the down-left-back corner, so with that corner held there are 7! x 3^6 = 3,674,160 positions. A breadth-first search builds the distance of every position from solved (about half a second, once), and a solve walks down the table, so every solution is a shortest one (at most 11 moves, half turns counting as one). The tests check the table against the known counts per depth (1, 9, 54, 321, ...), and check 400 random cubes on the independent 3x3 simulator. Stickers are 24 symbols (U R F D L B faces, 2 by 2 each); the colors are matched to faces using the fixed corner and the fact that opposite colors never share a corner. The page for it is `web/two.js`. Photo scanning is 3x3 only.
+
+## 4x4 solver
+
+`src/lib/four/` solves a 4x4x4 by reduction: (1) get the 24 center stickers into six solid faces, (2) pair the 24 wing pieces into 12 whole edges, (3) hand the 3x3 hiding inside to the normal two-phase solver. The cube is modeled as a permutation of 96 stickers (`model.ts`), with 36 single-layer moves (outer or second layer, three powers); wide turns like `Rw` are an outer and a second-layer turn together.
+
+The center and edge steps use 3-cycles, found offline by meet-in-the-middle searches and stored as short move words in `macros.ts` (`tests/four.test.ts` re-checks them on the model). 3,392 center 3-cycles are used as they are; 2,400 wing 3-cycles that leave every center and corner alone are also conjugated by one outer turn, giving about 45,000. At each step the solver picks whichever sequence puts the most pieces in place, and when no single one helps it looks two steps ahead (the pairing sometimes needs a step that temporarily unpairs something).
+
+Parity (a lone flipped edge, or two edges swapped) is not handled with memorized algorithms. How the centers are solved decides how the wings get paired, so a reduced cube that would be an impossible 3x3 is just discarded and the centers and edges are solved a different way (a couple of loose turns first, and for positions that are already nearly reduced, ten slice turns). It keeps the shortest of up to three valid tries, then every answer is replayed on the model before it is returned. A 4x4 has no fixed centers, so the solver starts from whichever of the 24 ways to name the faces already has the most centers right, and the finished cube can have its colors on different faces than where they started.
+
+Typical results on random scrambles: about 117 moves (centers ~48, edges ~46, 3x3 ~20), 1 to 4 seconds in Node. The page is `web/four.js`; photo scanning is 3x3 only.
 
 ## WCA Top 100
 

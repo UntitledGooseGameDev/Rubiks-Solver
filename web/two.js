@@ -295,7 +295,7 @@ const TwoUI = (function () {
         solving = false;
         if (!r.ok) { setStatus(r.message || 'The solver could not finish.', true); updateTransport(); return; }
         startState = snapshot; moves = parseAlg(r.moves.join(' ')); idx = 0; buildPlan();
-        setStatus('Found a ' + r.length + '-move solution in ' + (r.ms / 1000).toFixed(2) + ' s. That is the shortest possible.', false);
+        setStatus('Found ' + (/^(8|11|18|8\d)$/.test(String(r.length)) ? 'an ' : 'a ') + r.length + '-move solution in ' + (r.ms / 1000).toFixed(2) + ' s. That is the shortest possible.', false);
         updateTransport();
       }, 40);
     });

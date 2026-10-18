@@ -3,9 +3,30 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '3.0',
+  version: '3.1',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '3.1',
+      date: '2026-10-18',
+      title: '4×4 solver',
+      sections: [
+        {
+          heading: 'New',
+          items: [
+            '4×4 page (pick 4×4×4 in the cube menu): paint your 4×4, scramble it, type your own moves and watch it turn in 3D.',
+            'The solver works the way people solve a 4×4: it matches up the centers, pairs the edges into whole edges, then solves what is left as a 3×3. The two parity cases only a 4×4 has are handled for you. Solutions are usually 100 to 130 moves and take a few seconds to find. Press play, or click a move to jump to it.',
+          ],
+        },
+        {
+          heading: 'Good to know',
+          items: [
+            'Moves are U R F D L B for the outer layer, 2R for the layer just under it, and Rw (or r) for both together, each with an optional 2 or \u2019.',
+            'A 4×4 has no fixed centers, so when it is solved the colors may sit on different faces than where they started. Photo scanning is for 3×3 cubes only.',
+          ],
+        },
+      ],
+    },
     {
       version: '3.0',
       date: '2026-10-18',
