@@ -3,9 +3,22 @@
  * header, the Update log page and the tests all read it. Newest release first.
  */
 const SiteInfo = {
-  version: '3.1',
+  version: '3.2',
   repo: 'https://github.com/UntitledGooseGameDev/Rubiks-Solver',
   changelog: [
+    {
+      version: '3.2',
+      date: '2026-10-18',
+      title: 'New name',
+      sections: [
+        {
+          heading: 'Changed',
+          items: [
+            'The site is now called CubeWise.',
+          ],
+        },
+      ],
+    },
     {
       version: '3.1',
       date: '2026-10-18',
